@@ -6,12 +6,15 @@
 //TODO predavat z prikazove radky
 //pro oba rozmery definovat ruzne konstanty
 //pro implementaci prostredi asi zavest z-kovou souradnici v poli a ukladat do ni priznaky prostredi
-#define MATRIX_COUNT 10
+#define MATRIX_ROWS 10
+#define MATRIX_COLS 10
+
 #define PADDING_SIZE 1
 #define AVAILABLE_STATES_COUNT 85
 #define OBSTACLE -1
 #define BORDER 0
-#define totalSize MATRIX_COUNT+2*PADDING_SIZE
+#define TOTAL_SIZE_ROWS MATRIX_ROWS+2*PADDING_SIZE
+#define TOTAL_SIZE_COLS MATRIX_COLS+2*PADDING_SIZE
 #define NUMBER_OF_OBSERVATIONS 6
 
 int obstacles[] = {11,18,23,25,33,35,43,45,55,64,66,74,76,84,86}; // indexy prekazek, TODO -- nechat zadat z radky, asi namalovat grid
@@ -27,6 +30,32 @@ int traps_index = 0;
 int bounties_index = 0;
 
 //TODO vypsat strukturovani cassandra souboru
+
+int args_parse() {
+    //zpracovat argumenty
+    //vymyslet prepinace
+    /*
+    ----co predavat: -----------------------------------------------
+    obrazek matice
+    # - prekazky
+    G v obrazku - cile
+    F v obrazku - neuspech
+    T v obrazku - pasti
+    B - odmeny
+
+    --- dalsi obrazek -- zjednouduseny ------------------------------------
+    * - kluzke prostredi (zmeni se smer akce)
+    ! - nepruchodne prostredi (tezko se dostava do dalsich stavu)
+
+    --- ostatni parametry--------------------------------------------------
+    nazvy akci oddelene carkou (n,s,e,w) --- prepinac -actions
+    discount (mensi nez 1) --- prepinac -discount   (u akci a discountu udelat implicitni, pokud nebude zadano z radky)
+    mozna nahodne rozmisteni prekazek, pasti a odmen, pokud nemame specifické pozadavky
+    rozmery gridu!!!!
+
+    */
+    return 0;
+}
 
 
 void mergeAndSortArrays(int mergedArray[], int goals[], int failures[], int traps[], int bounties[], int sizes[]) {
@@ -59,7 +88,7 @@ void mergeAndSortArrays(int mergedArray[], int goals[], int failures[], int trap
         }
     }
 
-    for (int i = 0; i < totalSize; i++) {
+    for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
         mergedArray[i] = tempArray[i];
     }
 
@@ -68,9 +97,9 @@ void mergeAndSortArrays(int mergedArray[], int goals[], int failures[], int trap
 }
 
 
-void action_north(int matrix[][totalSize]) {
-    for (int i = PADDING_SIZE; i < MATRIX_COUNT + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COUNT + PADDING_SIZE; j++) {
+void action_north(int matrix[][TOTAL_SIZE_COLS]) {
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
             for (int k = 1 ; k <= AVAILABLE_STATES_COUNT ; k++) {
                 if (matrix[i][j] != OBSTACLE) {
                     if (matrix[i-1][j] == OBSTACLE || matrix[i-1][j] == BORDER) {
@@ -98,10 +127,10 @@ void action_north(int matrix[][totalSize]) {
 }
 
 
-void action_south(int matrix[][totalSize]) {
+void action_south(int matrix[][TOTAL_SIZE_COLS]) {
 
-    for (int i = PADDING_SIZE; i < MATRIX_COUNT + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COUNT + PADDING_SIZE; j++) {
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
             for (int k = 1 ; k <= AVAILABLE_STATES_COUNT ; k++) {
                 if (matrix[i][j] != OBSTACLE) {
                     if (matrix[i+1][j] == OBSTACLE || matrix[i+1][j] == BORDER) {
@@ -128,10 +157,10 @@ void action_south(int matrix[][totalSize]) {
     }
 }
 
-void action_east(int matrix[][totalSize]) {
+void action_east(int matrix[][TOTAL_SIZE_COLS]) {
 
-    for (int i = PADDING_SIZE; i < MATRIX_COUNT + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COUNT + PADDING_SIZE; j++) {
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
             for (int k = 1 ; k <= AVAILABLE_STATES_COUNT ; k++) {
                 if (matrix[i][j] != OBSTACLE) {
                     if (matrix[i][j+1] == OBSTACLE || matrix[i][j+1] == BORDER) {
@@ -159,10 +188,10 @@ void action_east(int matrix[][totalSize]) {
     }
 }
 
-void action_west(int matrix[][totalSize]) {
+void action_west(int matrix[][TOTAL_SIZE_COLS]) {
 
-    for (int i = PADDING_SIZE; i < MATRIX_COUNT + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COUNT + PADDING_SIZE; j++) {
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
             for (int k = 1 ; k <= AVAILABLE_STATES_COUNT ; k++) {
                 if (matrix[i][j] != OBSTACLE) {
                     if (matrix[i][j-1] == OBSTACLE || matrix[i][j-1] == BORDER) {
@@ -190,9 +219,9 @@ void action_west(int matrix[][totalSize]) {
     }
 }
 
-void observations(int matrix[][totalSize]) {
-    for (int i = PADDING_SIZE; i < MATRIX_COUNT + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COUNT + PADDING_SIZE; j++) {
+void observations(int matrix[][TOTAL_SIZE_COLS]) {
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
             if (matrix[i][j] == OBSTACLE) {
                 continue;
             } else if (matrix[i][j] == goals[goals_index]) {
@@ -258,11 +287,11 @@ void observations(int matrix[][totalSize]) {
     }
 }
 
-void rewards(int matrix[][totalSize]) {
+void rewards(int matrix[][TOTAL_SIZE_COLS]) {
     goals_index = 0;
     failures_index = 0;
-    for (int i = PADDING_SIZE; i < MATRIX_COUNT + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COUNT + PADDING_SIZE; j++) {
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
             if (matrix[i][j] == OBSTACLE) {
                 continue;
             } else if (matrix[i][j] == goals[goals_index]) {
@@ -281,7 +310,7 @@ void rewards(int matrix[][totalSize]) {
 
 
 
-int main() {
+int main(int argc, char **agrv) {
 
     float discount = 0.95;
     printf("discount: %3f\n", discount);
@@ -315,28 +344,19 @@ int main() {
 
     printf("\n");
 
-    int matrix[totalSize][totalSize];
+    int matrix[TOTAL_SIZE_ROWS][TOTAL_SIZE_COLS];
+ 
 
-    for (int i = 0 ; i < AVAILABLE_STATES_COUNT; i++) {
-        if (i > 7) {
-            printf("-%d-", i + 1);
-        } else {
-            printf("-%d- ", i + 1);
-        }
-        
-    }
-    printf("\n");
-
-    for (int i = 0 ; i < totalSize; i++) {
-        for (int j = 0 ; j < totalSize ; j++) {
+    for (int i = 0 ; i < TOTAL_SIZE_ROWS; i++) {
+        for (int j = 0 ; j < TOTAL_SIZE_COLS ; j++) {
             matrix[i][j] = 0;
         }
     }
     
     int count = 1;
 
-    for (int i = PADDING_SIZE; i < PADDING_SIZE + MATRIX_COUNT; i++) {
-        for (int j = PADDING_SIZE; j < PADDING_SIZE + MATRIX_COUNT; j++) {
+    for (int i = PADDING_SIZE; i < PADDING_SIZE + MATRIX_ROWS; i++) {
+        for (int j = PADDING_SIZE; j < PADDING_SIZE + MATRIX_COLS; j++) {
             if (count - 1 + help == obstacles[obstacle_index]) {
                 matrix[i][j] = OBSTACLE;
                 help++;
@@ -349,16 +369,16 @@ int main() {
     }
 
 
-    /*  PRINTING of the matrix
-
-    for (int i = 0; i < totalSize; i++) {
-        for (int j = 0; j < totalSize; j++) {
-            printf("%3d ", matrix[i][j]);
+    
+    fprintf(stderr, "\n");
+    for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
+        for (int j = 0; j < TOTAL_SIZE_COLS; j++) {
+            fprintf(stderr, "%3d ", matrix[i][j]);
         }
-        printf("\n");
+        fprintf(stderr, "\n");
     }
 
-    */
+    
 
     printf("T: s\n");
     action_south(matrix);
