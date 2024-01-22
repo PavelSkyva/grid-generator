@@ -3,10 +3,10 @@ CC=gcc
 CFLAGS= -Wall -Wextra -std=c17 -pedantic -lm
 
 
-EX= grid-generator
+EX= cassandra-generator
 
 #sem vepsat vzdy kazdy novy soubor (s priponou .o)
-SRC= grid-generator.o
+SRC= cassandra-generator.o grid-generator.o
 
 all: $(SRC)
 		$(CC) $(CFLAGS) -o $(EX) $(SRC)

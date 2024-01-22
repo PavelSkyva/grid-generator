@@ -1,1 +1,1 @@
-# grid-generator
+# cassandra-generator
