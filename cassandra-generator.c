@@ -71,6 +71,12 @@ int args_parse(int argc, char **argv) {
             MATRIX_ROWS = atoi(argv[i+1]);
         } else if (strcmp(argv[i], "-cols") == 0) {
             MATRIX_COLS = atoi(argv[i+1]);
+        } else if (strcmp(argv[i], "--help") == 0) {
+            printf("Spousteni skriptu:\n\t./cassandra-generator -matrix <nazev souboru s obrazkem matice> -rows <pocet_radku> -cols <pocet_sloupcu>\n\n(Na poradi parametru nezalezi)\n");
+            return 1;
+        } else {
+            printf("Spatne zadane parametry, zkuste --help\n");
+            return 1;
         }
     }
 
