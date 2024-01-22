@@ -18,8 +18,13 @@
 
 #define PADDING_SIZE 1
 
-#define OBSTACLE -1
 #define BORDER 0
+#define OBSTACLE -1
+#define GOAL -2
+#define FAILURE -3
+#define TRAP -4
+#define BOUNTY -5
+
 #define NUMBER_OF_OBSERVATIONS 6
 
 int args_parse(int argc, char **argv);

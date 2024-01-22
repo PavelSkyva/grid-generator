@@ -13,10 +13,10 @@ int TOTAL_SIZE_COLS;
 int TOTAL_SIZE_ROWS;
 int obstacle_index = 0; // index posledni prozkoumavane prekazky
 int help = 0; // pro vyrovnani preskakovani prekazek
-int goals[] = {10, 85};
-int failures[] = {42};
-int traps[] = {14};
-int bounties[] = {81};
+int *goals;
+int *failures;
+int *traps;
+int *bounties;
 int goals_index = 0;
 int failures_index = 0;
 int traps_index = 0;
@@ -120,7 +120,6 @@ void mergeAndSortArrays(int mergedArray[], int goals[], int failures[], int trap
     for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
         mergedArray[i] = tempArray[i];
     }
-
 
     free(tempArray);
 }
@@ -336,6 +335,8 @@ void rewards(int matrix[][TOTAL_SIZE_COLS]) {
     }
 }
 
+
+
 long getFileSize(FILE *file) {
     long size;
 
@@ -375,7 +376,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // pro ne random vygenerovani gridu
+    // pro nenáhodné vygenerovani gridu
     //long fileSize = getFileSize(file);
 
     int matrix[TOTAL_SIZE_ROWS][TOTAL_SIZE_COLS];
@@ -400,12 +401,77 @@ int main(int argc, char **argv) {
                 matrix[i][j] = OBSTACLE;
                 obstacles_count++;
             } else {
-                matrix[i][j] = state_count++;
+                if (matrix[i][j] == 'G') {
+                    matrix[i][j] = GOAL;
+                    goals_index++;
+                } else if (matrix[i][j] == 'F') {
+                    matrix[i][j] = FAILURE;
+                    failures_index++;
+                } else if (matrix[i][j] == 'T') {
+                    matrix[i][j] = TRAP;
+                    traps_index++;
+                } else if (matrix[i][j] == 'B') {
+                    matrix[i][j] = BOUNTY;
+                    bounties_index++;
+                } else {
+                    matrix[i][j] = state_count;
+                }
+                state_count++;
             }
             
         }
     }
 
+    
+
+    int sizes[] = {goals_index, failures_index, traps_index, bounties_index}; // Number of elements in each array
+
+    fprintf(stderr, "number_of_goals: %d, number_of_failures: %d, number_of_traps: %d, number_of_bounties: %d\n", goals_index, failures_index, traps_index, bounties_index);
+
+    
+
+    //alokovani mista pro cisla stavu jednotlivych cilu, pasti....
+    goals = malloc(goals_index * sizeof(int));
+    failures = malloc(failures_index * sizeof(int));
+    traps = malloc(traps_index * sizeof(int));
+    bounties = malloc(bounties_index * sizeof(int));
+
+    goals_index = failures_index = traps_index = bounties_index = 0;
+    state_count = 1;
+
+    
+    for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
+        for (int j = 0; j < TOTAL_SIZE_COLS; j++) {
+            if (matrix[i][j] == OBSTACLE) {
+                continue;
+            } else if (matrix[i][j] == GOAL) {
+                goals[goals_index] = state_count;
+                fprintf(stderr, "goal: %d---", goals[goals_index]);
+                goals_index++;
+                matrix[i][j] = state_count++;
+            } else if (matrix[i][j] == FAILURE) {
+                failures[failures_index] = state_count;
+                fprintf(stderr, "failure: %d---", failures[failures_index]);
+                failures_index++;
+                matrix[i][j] = state_count++;
+            } else if (matrix[i][j] == TRAP) {
+                traps[traps_index] = state_count;
+                fprintf(stderr, "trap: %d---", traps[traps_index]);
+                traps_index++;
+                matrix[i][j] = state_count++;
+            } else if (matrix[i][j] == BOUNTY) {
+                bounties[bounties_index] = state_count;
+                fprintf(stderr, "bounty: %d---", bounties[bounties_index]);
+                bounties_index++;
+                matrix[i][j] = state_count++;
+            } else {
+                state_count++;
+            }
+        }
+    }
+
+    fprintf(stderr, "\n");
+    
     for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
         for (int j = 0; j < TOTAL_SIZE_COLS; j++) {
             fprintf(stderr, "%3d ", matrix[i][j]);
@@ -413,11 +479,12 @@ int main(int argc, char **argv) {
         fprintf(stderr, "\n");
     }
 
+
+
+
     
 
     AVAILABLE_STATES_COUNT = (TOTAL_SIZE_ROWS * TOTAL_SIZE_COLS) - border_obstacles_count - (obstacles_count - border_obstacles_count);
-
-    fprintf(stderr, "AVAIALBLESTATESCOUNT:%d, border_obstacles:%d, obstacles:%d\n", AVAILABLE_STATES_COUNT, border_obstacles_count, obstacles_count - border_obstacles_count);
 
     float discount = 0.95;
     printf("discount: %3f\n", discount);
@@ -432,7 +499,9 @@ int main(int argc, char **argv) {
     //do pole retezcu
     printf("observations: left right neither both good bad\n");
 
-    int sizes[] = {sizeof(goals) / sizeof(goals[0]), sizeof(failures) / sizeof(failures[0]), sizeof(traps) / sizeof(traps[0]), sizeof(bounties) / sizeof(bounties[0])}; // Number of elements in each array
+    
+
+
 
     int size = sizes[0] + sizes[1] + sizes[2] + sizes[3];
     int mergedArray[size];
@@ -450,11 +519,6 @@ int main(int argc, char **argv) {
     }
 
     printf("\n");
-
-    
-    
-    
-
     
 
     printf("T: s\n");

@@ -36,7 +36,7 @@ int grid_generation(int rows, int cols, char* filename) {
         if (i % (TOTAL_SIZE_COLS + 1) == 0) {
             matrix[i] = '\n';
         } else {
-            // generovani mrizek pro prvni a posledni radek
+            // generovani mrizek pro prvni a posledni radek a okraje
             if (i < TOTAL_SIZE_COLS + 1 || i > (TOTAL_SIZE_ROWS - 1) * (TOTAL_SIZE_COLS + 1) || i % (TOTAL_SIZE_COLS + 1) == 1 || i % (TOTAL_SIZE_COLS + 1) == TOTAL_SIZE_COLS) {
                 matrix[i] = '#';
             } else {
@@ -45,17 +45,48 @@ int grid_generation(int rows, int cols, char* filename) {
         }
     }
 
+    //nutno vygenerovat aspon jeden cilovy stav uspechu a neuspechu
+    int goal_number = allocated * (rand() / (RAND_MAX + 1.0));
+    fprintf(stderr, "goal_number:%d ....... %d\n", goal_number, rand());
+    while (matrix[goal_number] != ' ') {
+        fprintf(stderr, "goal_number:%d", goal_number);
+        goal_number = (int) allocated * (rand() /( RAND_MAX + 1.0));
+    }
+    matrix[goal_number] = 'G';
+
+    int fail_number = (int) allocated * (rand() / (RAND_MAX + 1.0));
+    while (matrix[fail_number] != ' ') {
+        fail_number = (int) allocated * (rand() / (RAND_MAX + 1.0));
+    }
+    matrix[fail_number] = 'F';
+
+    // vygenerovat prekazky, cile, neuspechy, pasti a odmeny
+    // TODO pravdepodobnosti do promennych, at se daji lehce menit
     for (int i = 0; i < allocated; i++) {
         if (matrix[i] == ' ') {
-            random_number = rand();
-            // 1/10 sance ze vygeneruje prekazku
-            if (random_number < RAND_MAX / 10) {
+            random_number = rand() / (RAND_MAX + 1.0);
+            //pod 10% 
+            if (random_number < 0.1) {
                 matrix[i] = '#';
-            } else {
-                matrix[i] = ' ';
+            //pod 12.5%
+            } else if (random_number < 0.125){
+                matrix[i] = 'T';
+            //pod 15%
+            } else if (random_number < 0.15){
+                matrix[i] = 'B';
+            } else if (random_number < 0.165) {
+                matrix[i] = 'G';
+            } else if (random_number < 0.18) {
+                matrix[i] = 'F';
             }
+            //jinak zustava mezera
         }
+        //jinak zustava prekazka/cil/neuspech
     }
+
+
+
+    fprintf(stderr, "%d\n", RAND_MAX);
 
     matrix[allocated] = '\0';
 
