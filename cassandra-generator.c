@@ -5,8 +5,13 @@
 #include "cassandra-generator.h"
 
 
+/*TODO
+-- absorbující/neabsorbující varianty
+-- usporadat konstanty do jednoho místa
+-- udelat vice souboru naraz (dat konstanty, ktere to budou ovladat)
+*/
 
-//int obstacles[] = {}; // indexy prekazek, TODO -- nechat zadat z radky, asi namalovat grid
+
 int MATRIX_ROWS;
 int MATRIX_COLS;
 int TOTAL_SIZE_COLS;
@@ -21,14 +26,25 @@ int goals_index = 0;
 int failures_index = 0;
 int traps_index = 0;
 int bounties_index = 0;
+int special_states_count;
 //retezec pro uchovani jmena souboru z cmd
 char *matrix_arg;
 int AVAILABLE_STATES_COUNT;
 int border_obstacles_count;
 int obstacles_count;
+// kolik bludisti vytvorit pri nahodnem generovani
+int repeat_count = 10;
 
 
-//TODO vypsat strukturovani cassandra souboru
+// ------------------------HODNOTY NA UPRAVOVANI-------------------------------
+double step_reward = -0.04;
+double bounty_reward = 10;
+double trap_reward = -10;
+double goal_reward = 1.0;
+double failure_reward = -1.0;
+float discount = 0.95;
+// ----------------------------------------------------------------------------
+
 
 int args_parse(int argc, char **argv) {
     //zpracovat argumenty
@@ -316,20 +332,84 @@ void observations(int matrix[][TOTAL_SIZE_COLS]) {
 }
 
 void rewards(int matrix[][TOTAL_SIZE_COLS]) {
-    goals_index = 0;
-    failures_index = 0;
+    goals_index = failures_index = traps_index = bounties_index = 0;
+
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
         for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
             if (matrix[i][j] == OBSTACLE) {
                 continue;
             } else if (matrix[i][j] == goals[goals_index]) {
-                printf("R: * : %d : * : * : 1.0\n", matrix[i][j]);
+                printf("R: * : %d : * : * : %3f\n", matrix[i][j], goal_reward);
                 goals_index++;
             } else if (matrix[i][j] == failures[failures_index]) {
-                printf("R: * : %d : * : * : -1.0\n", matrix[i][j]);
+                printf("R: * : %d : * : * : %3f\n", matrix[i][j], failure_reward);
                 failures_index++;
+            } else if(matrix[i][j] == traps[traps_index]) {
+                printf("R: * : %d : * : * : %3f\n", matrix[i][j], trap_reward); 
+                traps_index++;
+            } else if (matrix[i][j] == bounties[bounties_index]) {
+                printf("R: * : %d : * : * : %3f\n", matrix[i][j], bounty_reward);
+                bounties_index++;
             } else {
-                printf("R: * : %d : * : * : -0.04\n", matrix[i][j]);
+                printf("R: * : %d : * : * : %3f\n", matrix[i][j], step_reward);
+            }
+        }
+    }
+}
+
+void generate_exceptions(int matrix[][TOTAL_SIZE_COLS], bool absorbing, int *special_states_array) {
+    goals_index = failures_index = 0;
+    int special_states_array_index = 0;
+    double uniform_probability = 1.0 / (AVAILABLE_STATES_COUNT - special_states_count);
+    //fprintf(stderr, "%f\nspecial_states_count:%d\navailable:%d\nresult:%d\ntest:%f\n", uniform_probability, special_states_count, AVAILABLE_STATES_COUNT, AVAILABLE_STATES_COUNT - special_states_count, uniform_probability * (AVAILABLE_STATES_COUNT - special_states_count));
+    printf("\n");
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
+            
+            if (matrix[i][j] == goals[goals_index]) {
+                printf("T: * : %d\n", matrix[i][j]);
+                if (!absorbing) {
+                    for (int k = 0; k < AVAILABLE_STATES_COUNT; k++) {
+                        if (k == special_states_array[special_states_array_index]) {
+                            printf("0.0 ");
+                            special_states_array_index++;
+                        } else {
+                            printf("%f ", uniform_probability);
+                        }
+                    }
+                } else {
+                    for (int k = 0; k < AVAILABLE_STATES_COUNT; k++) {
+                        if (k == matrix[i][j]) {
+                            printf("1.0 ");
+                        } else {
+                            printf("0.0 ");
+                        }
+                    }
+                }
+                printf("\n\n");
+                goals_index++;
+            } else if (matrix[i][j] == failures[failures_index]) {
+                printf("T: * : %d\n", matrix[i][j]);
+                if (!absorbing) {
+                    for (int k = 0; k < AVAILABLE_STATES_COUNT; k++) {
+                        if (k == special_states_array[special_states_array_index]) {
+                            printf("0.0 ");
+                            special_states_array_index++;
+                        } else {
+                            printf("%f ", uniform_probability);
+                        }
+                    }
+                } else {
+                    for (int k = 0; k < AVAILABLE_STATES_COUNT; k++) {
+                        if (k == matrix[i][j]) {
+                            printf("1.0 ");
+                        } else {
+                            printf("0.0 ");
+                        }
+                    }
+                }
+                printf("\n\n");
+                failures_index++;
             }
         }
     }
@@ -422,7 +502,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    
+    special_states_count = goals_index + failures_index + traps_index + bounties_index;
 
     int sizes[] = {goals_index, failures_index, traps_index, bounties_index}; // Number of elements in each array
 
@@ -478,15 +558,28 @@ int main(int argc, char **argv) {
         }
         fprintf(stderr, "\n");
     }
-
-
-
-
     
 
     AVAILABLE_STATES_COUNT = (TOTAL_SIZE_ROWS * TOTAL_SIZE_COLS) - border_obstacles_count - (obstacles_count - border_obstacles_count);
 
-    float discount = 0.95;
+    bool absorbing = false;
+
+    /*
+    FILE *file_absorbing = fopen(matrix_arg, "r");
+
+    if (file_absorbing == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    FILE *file_not_absorbing = fopen(matrix_arg, "r");
+
+    if (file_not_absorbing == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
+    */
+    
     printf("discount: %3f\n", discount);
 
     printf("values: reward\n");
@@ -500,8 +593,6 @@ int main(int argc, char **argv) {
     printf("observations: left right neither both good bad\n");
 
     
-
-
 
     int size = sizes[0] + sizes[1] + sizes[2] + sizes[3];
     int mergedArray[size];
@@ -537,6 +628,8 @@ int main(int argc, char **argv) {
     action_west(matrix);
     printf("\n\n");
 
+    generate_exceptions(matrix, absorbing, mergedArray);
+
     printf("O: *\n");
     observations(matrix);
     printf("\n\n");
@@ -544,6 +637,10 @@ int main(int argc, char **argv) {
     rewards(matrix);
 
     free(matrix_arg);
+    free(goals);
+    free(traps);
+    free(bounties);
+    free(failures);
 
     fclose(file);
 
