@@ -30,12 +30,11 @@ int traps_index = 0;
 int bounties_index = 0;
 int special_states_count;
 //retezec pro uchovani jmena souboru z cmd
-char *matrix_arg;
+char *input_matrix_file_string;
 int AVAILABLE_STATES_COUNT;
 int border_obstacles_count;
 int obstacles_count;
-// kolik bludisti vytvorit pri nahodnem generovani
-int repeat_count = 10;
+
 
 
 // ------------------------HODNOTY NA UPRAVOVANI-------------------------------
@@ -45,6 +44,8 @@ double trap_reward = -10;
 double goal_reward = 1.0;
 double failure_reward = -1.0;
 float discount = 0.95;
+// kolik bludisti vytvorit pri nahodnem generovani
+int repeat_count = 10;
 // ----------------------------------------------------------------------------
 
 
@@ -76,13 +77,13 @@ int args_parse(int argc, char **argv) {
         if (strcmp(argv[i], "-matrix") == 0) {
             /*
             size_t length = strlen(argv[i+1]);
-            matrix_arg = malloc(length + 1);
+            input_matrix_file_string = malloc(length + 1);
 
-            if (matrix_arg != NULL) {
-                strncpy(matrix_arg, argv[i + 1], length);
-                matrix_arg[length] = '\0';
+            if (input_matrix_file_string != NULL) {
+                strncpy(input_matrix_file_string, argv[i + 1], length);
+                input_matrix_file_string[length] = '\0';
             } else {  
-                //fprintf(stderr, "Error: Failed to allocate memory for matrix_arg\n");
+                //fprintf(stderr, "Error: Failed to allocate memory for input_matrix_file_string\n");
                 return 1;
             }
             */
@@ -504,7 +505,7 @@ int main(int argc, char **argv) {
     border_obstacles_count = 2 * TOTAL_SIZE_COLS + 2 * TOTAL_SIZE_ROWS - 4;
 
     char *directory = (char *) malloc(50);
-    matrix_arg = (char*) malloc(20);
+    input_matrix_file_string = (char*) malloc(20);
 
     strcpy(directory, "outputs");
 
@@ -531,24 +532,22 @@ int main(int argc, char **argv) {
             }
         }
 
-        sprintf(matrix_arg, "in%d.txt", repeat_number);
+        sprintf(input_matrix_file_string, "in%d.txt", repeat_number);
         sprintf(n_abs_file_number, "not_absorbing_%d.txt", repeat_number);
         sprintf(abs_file_number, "absorbing_%d.txt", repeat_number);
 
         chdir(directory);
-        
 
-
-        if (grid_generation(MATRIX_ROWS, MATRIX_COLS, matrix_arg)) {
+        if (grid_generation(MATRIX_ROWS, MATRIX_COLS, input_matrix_file_string)) {
             printf("an error occured in generating\n");
             return 1;
         }
         
 
-        FILE *file = fopen(matrix_arg, "r");
+        FILE *input_matrix_file = fopen(input_matrix_file_string, "r+");
         
 
-        if (file == NULL) {
+        if (input_matrix_file == NULL) {
             perror("Error opening file");
             return 1;
         }
@@ -558,11 +557,11 @@ int main(int argc, char **argv) {
 
         int matrix[TOTAL_SIZE_ROWS][TOTAL_SIZE_COLS];
 
-        fseek(file, 0, SEEK_SET);
+        fseek(input_matrix_file, 0, SEEK_SET);
 
         for (int i = 0 ; i < TOTAL_SIZE_ROWS; i++) {
             for (int j = 0 ; j < TOTAL_SIZE_COLS ; j++) {
-                if((matrix[i][j] = fgetc(file)) == '\n'){
+                if((matrix[i][j] = fgetc(input_matrix_file)) == '\n'){
                     j--;
                 }       
             }
@@ -644,19 +643,19 @@ int main(int argc, char **argv) {
             }
         }
 
-        //fprintf(stderr, "\n");
+        fprintf(input_matrix_file, "\n");
         
+        //printeni matice do souboru in<cislo>.txt
         for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
             for (int j = 0; j < TOTAL_SIZE_COLS; j++) {
-                //fprintf(stderr, "%3d ", matrix[i][j]);
+                fprintf(input_matrix_file, "%3d ", matrix[i][j]);
             }
-            //fprintf(stderr, "\n");
+            fprintf(input_matrix_file, "\n");
         }
+        
         
 
         AVAILABLE_STATES_COUNT = (TOTAL_SIZE_ROWS * TOTAL_SIZE_COLS) - border_obstacles_count - (obstacles_count - border_obstacles_count);
-
-        bool absorbing = false;
 
         
         file_absorbing = fopen(abs_file_number, "w+");
@@ -672,6 +671,8 @@ int main(int argc, char **argv) {
             perror("Error opening file");
             return 1;
         }
+
+        bool absorbing = false;
 
         for (int i = 0; i < 2; i++) {
         
@@ -760,16 +761,16 @@ int main(int argc, char **argv) {
 
         fclose(file_absorbing);
         fclose(file_not_absorbing);
-        fclose(file);
+        fclose(input_matrix_file);
         chdir("..");
         repeat_number++;
         //nutno resetovat countery
-        obstacles_count = 0;
+        goals_index = failures_index = traps_index = bounties_index = obstacles_count = 0;
     }
 
     free(n_abs_file_number);
     free(abs_file_number);
-    free(matrix_arg);
+    free(input_matrix_file_string);
     free(directory);
 
     return 0;
