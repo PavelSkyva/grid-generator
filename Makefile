@@ -1,6 +1,6 @@
 RM=rm -f
 CC=gcc
-CFLAGS= -Wall -Wextra -std=c17 -pedantic -lm
+CFLAGS= -g -Wall -Wextra -std=c17 -pedantic -lm 
 
 
 EX= cassandra-generator
@@ -12,4 +12,6 @@ all: $(SRC)
 		$(CC) $(CFLAGS) -o $(EX) $(SRC)
 
 clean: #smaz vsechny object files a binarky 
-		$(RM) ${SRC} ${TSRC} ${EX} ${TEX}
+		$(RM) $(SRC) $(EX)
+		find . -type f -name '*.txt' -exec $(RM) {} +
+		find . -type d -empty -delete
