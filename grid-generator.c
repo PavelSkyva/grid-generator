@@ -11,7 +11,7 @@
 
 int grid_generation(int rows, int cols, char* filename) {
     
-    srand((unsigned int)time(NULL));
+    
 
     double random_number;
 
@@ -47,6 +47,7 @@ int grid_generation(int rows, int cols, char* filename) {
 
     //nutno vygenerovat aspon jeden cilovy stav uspechu a neuspechu
     int goal_number = allocated * (rand() / (RAND_MAX + 1.0));
+
     //fprintf(stderr, "goal_number:%d ....... %d\n", goal_number, rand());
     while (matrix[goal_number] != ' ') {
         //fprintf(stderr, "goal_number:%d", goal_number);

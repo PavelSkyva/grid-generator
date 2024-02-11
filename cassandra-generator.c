@@ -45,7 +45,7 @@ double goal_reward = 1.0;
 double failure_reward = -1.0;
 float discount = 0.95;
 // kolik bludisti vytvorit pri nahodnem generovani
-int repeat_count = 10;
+int repeat_count;
 // ----------------------------------------------------------------------------
 
 
@@ -87,7 +87,8 @@ int args_parse(int argc, char **argv) {
                 return 1;
             }
             */
-            
+        } else if (strcmp(argv[i], "-samples") == 0) {
+            repeat_count = atoi(argv[i+1]);
         } else if (strcmp(argv[i], "-rows") == 0) {
             MATRIX_ROWS = atoi(argv[i+1]);
         } else if (strcmp(argv[i], "-cols") == 0) {
@@ -96,7 +97,7 @@ int args_parse(int argc, char **argv) {
             //printf("Spousteni skriptu:\n\t./cassandra-generator -matrix <nazev souboru s obrazkem matice> -rows <pocet_radku> -cols <pocet_sloupcu>\n\n(Na poradi parametru nezalezi)\n");
             return 1;
         } else {
-            //printf("Spatne zadane parametry, zkuste --help\n");
+            printf("Spatne zadane parametry, zkuste --help\n");
             return 1;
         }
     }
@@ -149,7 +150,7 @@ void mergeAndSortArrays(int mergedArray[], int goals[], int failures[], int trap
 void action_north(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
         for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            for (int k = 1 ; k <= AVAILABLE_STATES_COUNT ; k++) {
+            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
                 if (matrix[i][j] != OBSTACLE) {
                     if (matrix[i-1][j] == OBSTACLE || matrix[i-1][j] == BORDER) {
                         if (k == matrix[i][j]) {
@@ -180,7 +181,7 @@ void action_south(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
 
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
         for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            for (int k = 1 ; k <= AVAILABLE_STATES_COUNT ; k++) {
+            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
                 if (matrix[i][j] != OBSTACLE) {
                     if (matrix[i+1][j] == OBSTACLE || matrix[i+1][j] == BORDER) {
                         if (k == matrix[i][j]) {
@@ -217,7 +218,7 @@ void action_east(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
 
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
         for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            for (int k = 1 ; k <= AVAILABLE_STATES_COUNT ; k++) {
+            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
                 if (matrix[i][j] != OBSTACLE) {
                     if (matrix[i][j+1] == OBSTACLE || matrix[i][j+1] == BORDER) {
                         if (k == matrix[i][j]) {
@@ -255,7 +256,7 @@ void action_west(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
 
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
         for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            for (int k = 1 ; k <= AVAILABLE_STATES_COUNT ; k++) {
+            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
                 if (matrix[i][j] != OBSTACLE) {
                     if (matrix[i][j-1] == OBSTACLE || matrix[i][j-1] == BORDER) {
                         if (k == matrix[i][j]) {
@@ -379,23 +380,23 @@ void rewards(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
             if (matrix[i][j] == OBSTACLE) {
                 continue;
             } else if (matrix[i][j] == goals[goals_index]) {
-                fprintf(absorbing ? file_absorbing : file_not_absorbing,"R: * : %d : * : * : %3f\n", matrix[i][j], goal_reward);
+                fprintf(absorbing ? file_absorbing : file_not_absorbing,"R: * : %d : * : *  %3f\n", matrix[i][j], goal_reward);
                 fflush(NULL);
                 goals_index++;
             } else if (matrix[i][j] == failures[failures_index]) {
-                fprintf(absorbing ? file_absorbing : file_not_absorbing,"R: * : %d : * : * : %3f\n", matrix[i][j], failure_reward);
+                fprintf(absorbing ? file_absorbing : file_not_absorbing,"R: * : %d : * : *  %3f\n", matrix[i][j], failure_reward);
                 fflush(NULL);
                 failures_index++;
             } else if(matrix[i][j] == traps[traps_index]) {
-                fprintf(absorbing ? file_absorbing : file_not_absorbing,"R: * : %d : * : * : %3f\n", matrix[i][j], trap_reward); 
+                fprintf(absorbing ? file_absorbing : file_not_absorbing,"R: * : %d : * : *  %3f\n", matrix[i][j], trap_reward); 
                 fflush(NULL);
                 traps_index++;
             } else if (matrix[i][j] == bounties[bounties_index]) {
-                fprintf(absorbing ? file_absorbing : file_not_absorbing,"R: * : %d : * : * : %3f\n", matrix[i][j], bounty_reward);
+                fprintf(absorbing ? file_absorbing : file_not_absorbing,"R: * : %d : * : *  %3f\n", matrix[i][j], bounty_reward);
                 fflush(NULL);
                 bounties_index++;
             } else {
-                fprintf(absorbing ? file_absorbing : file_not_absorbing,"R: * : %d : * : * : %3f\n", matrix[i][j], step_reward);
+                fprintf(absorbing ? file_absorbing : file_not_absorbing,"R: * : %d : * : *  %3f\n", matrix[i][j], step_reward);
                 fflush(NULL);
             }
         }
@@ -427,7 +428,7 @@ void generate_exceptions(int matrix[][TOTAL_SIZE_COLS], bool absorbing, int *spe
                         }
                     }
                 } else {
-                    for (int k = 1; k <= AVAILABLE_STATES_COUNT; k++) {
+                    for (int k = 0; k < AVAILABLE_STATES_COUNT; k++) {
                         if (k == matrix[i][j]) {
                             fprintf(absorbing ? file_absorbing : file_not_absorbing,"1.0 ");
                             fflush(NULL);
@@ -444,7 +445,7 @@ void generate_exceptions(int matrix[][TOTAL_SIZE_COLS], bool absorbing, int *spe
                 fprintf(absorbing ? file_absorbing : file_not_absorbing,"T: * : %d\n", matrix[i][j]);
                 fflush(NULL);
                 if (!absorbing) {
-                    for (int k = 1; k <= AVAILABLE_STATES_COUNT; k++) {
+                    for (int k = 0; k < AVAILABLE_STATES_COUNT; k++) {
                         if (k == special_states_array[special_states_array_index]) {
                             fprintf(absorbing ? file_absorbing : file_not_absorbing,"0.0 ");
                             fflush(NULL);
@@ -496,6 +497,8 @@ long getFileSize(FILE *file) {
 
 int main(int argc, char **argv) {
 
+    srand((unsigned int)time(NULL));
+
     if (args_parse(argc, argv)) {
         return 1;
     }
@@ -532,9 +535,9 @@ int main(int argc, char **argv) {
             }
         }
 
-        sprintf(input_matrix_file_string, "in%d.txt", repeat_number);
-        sprintf(n_abs_file_number, "not_absorbing_%d.txt", repeat_number);
-        sprintf(abs_file_number, "absorbing_%d.txt", repeat_number);
+        sprintf(input_matrix_file_string, "in%d.pomdp", repeat_number);
+        sprintf(n_abs_file_number, "not_absorbing_%d.pomdp", repeat_number);
+        sprintf(abs_file_number, "absorbing_%d.pomdp", repeat_number);
 
         chdir(directory);
 
@@ -568,7 +571,7 @@ int main(int argc, char **argv) {
         }
 
         
-        int state_count = 1;
+        int state_count = 0;
 
         for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
             for (int j = 0; j < TOTAL_SIZE_COLS; j++) {
@@ -610,7 +613,7 @@ int main(int argc, char **argv) {
         bounties = malloc(bounties_index * sizeof(int));
 
         goals_index = failures_index = traps_index = bounties_index = 0;
-        state_count = 1;
+        state_count = 0;
 
         
         for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
@@ -645,7 +648,7 @@ int main(int argc, char **argv) {
 
         fprintf(input_matrix_file, "\n");
         
-        //printeni matice do souboru in<cislo>.txt
+        //printeni matice do souboru in<cislo>.pomdp
         for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
             for (int j = 0; j < TOTAL_SIZE_COLS; j++) {
                 fprintf(input_matrix_file, "%3d ", matrix[i][j]);
@@ -704,7 +707,7 @@ int main(int argc, char **argv) {
             fprintf(absorbing ? file_absorbing : file_not_absorbing,"start exclude: ");
             fflush(NULL);
             int marked_spot_index = 0;
-            for (int i = 1; i <= AVAILABLE_STATES_COUNT; i++) {
+            for (int i = 0; i < AVAILABLE_STATES_COUNT; i++) {
                 if (i == mergedArray[marked_spot_index]) {
                     marked_spot_index++;
                     fprintf(absorbing ? file_absorbing : file_not_absorbing,"%d ", i);
