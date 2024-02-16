@@ -29,11 +29,15 @@ int failures_index = 0;
 int traps_index = 0;
 int bounties_index = 0;
 int special_states_count;
+double random_number;
 //retezec pro uchovani jmena souboru z cmd
 char *input_matrix_file_string;
 int AVAILABLE_STATES_COUNT;
 int border_obstacles_count;
 int obstacles_count;
+double slip_prob;
+bool slippery = false;
+
 
 
 
@@ -87,6 +91,9 @@ int args_parse(int argc, char **argv) {
                 return 1;
             }
             */
+        } else if (strcmp(argv[i], "--slippery") == 0) {
+            slip_prob = strtod(argv[i+1], NULL);
+            slippery = true;
         } else if (strcmp(argv[i], "-samples") == 0) {
             repeat_count = atoi(argv[i+1]);
         } else if (strcmp(argv[i], "-rows") == 0) {
@@ -94,16 +101,13 @@ int args_parse(int argc, char **argv) {
         } else if (strcmp(argv[i], "-cols") == 0) {
             MATRIX_COLS = atoi(argv[i+1]);
         } else if (strcmp(argv[i], "--help") == 0) {
-            //printf("Spousteni skriptu:\n\t./cassandra-generator -matrix <nazev souboru s obrazkem matice> -rows <pocet_radku> -cols <pocet_sloupcu>\n\n(Na poradi parametru nezalezi)\n");
+            printf("Spousteni skriptu:\n\t./cassandra-generator -matrix <nazev souboru s obrazkem matice> -rows <pocet_radku> -cols <pocet_sloupcu> --slippery <pravdepodobnost, ze agent uklouzne>\n\n(Na poradi parametru nezalezi)\n");
             return 1;
         } else {
             printf("Spatne zadane parametry, zkuste --help\n");
             return 1;
         }
     }
-
-
-
 
     return 0;
 }
@@ -147,12 +151,51 @@ void mergeAndSortArrays(int mergedArray[], int goals[], int failures[], int trap
 }
 
 
+
+
+void action_north_slip(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
+            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
+                if (matrix[i][j] != OBSTACLE) { 
+                    if (matrix[i-1][j] == OBSTACLE) {
+                        if (k == matrix[i][j]) {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"1.0 ");
+                        } else {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"0.0 ");
+                        }
+                    } else {
+                        if (k == matrix[i-1][j]) {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"%f ", 1.0 - slip_prob);
+                        } else if (k == matrix[i][j]) {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"%f ", slip_prob);
+                        } else {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"0.0 ");
+                        }
+                    }
+                    
+                } else if (matrix[i][j] == OBSTACLE) {
+                    break;
+                }
+            }
+            if (matrix[i][j] != OBSTACLE) 
+                fprintf(absorbing ? file_absorbing : file_not_absorbing,"\n"); 
+        }
+    }
+}
+
 void action_north(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
+
+    if (slippery) {
+        action_north_slip(matrix, absorbing);
+        return;
+    }
+    
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
         for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
             for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
                 if (matrix[i][j] != OBSTACLE) {
-                    if (matrix[i-1][j] == OBSTACLE || matrix[i-1][j] == BORDER) {
+                    if (matrix[i-1][j] == OBSTACLE) {
                         if (k == matrix[i][j]) {
                             fprintf(absorbing ? file_absorbing : file_not_absorbing,"1.0 ");
                         } else {
@@ -174,16 +217,53 @@ void action_north(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
                 fprintf(absorbing ? file_absorbing : file_not_absorbing,"\n"); 
         }
     }
+    
+}
+
+void action_south_slip(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
+            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
+                if (matrix[i][j] != OBSTACLE) { 
+                    if (matrix[i+1][j] == OBSTACLE) {
+                        if (k == matrix[i][j]) {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"1.0 ");
+                        } else {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"0.0 ");
+                        }
+                    } else {
+                        if (k == matrix[i+1][j]) {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"%f ", 1.0 - slip_prob);
+                        } else if (k == matrix[i][j]) {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"%f ", slip_prob);
+                        } else {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"0.0 ");
+                        }
+                    }
+                    
+                } else if (matrix[i][j] == OBSTACLE) {
+                    break;
+                }
+            }
+            if (matrix[i][j] != OBSTACLE) 
+                fprintf(absorbing ? file_absorbing : file_not_absorbing,"\n"); 
+        }
+    }
 }
 
 
 void action_south(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
 
+    if (slippery) {
+        action_south_slip(matrix, absorbing);
+        return;
+    }
+
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
         for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
             for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
                 if (matrix[i][j] != OBSTACLE) {
-                    if (matrix[i+1][j] == OBSTACLE || matrix[i+1][j] == BORDER) {
+                    if (matrix[i+1][j] == OBSTACLE) {
                         if (k == matrix[i][j]) {
                             fprintf(absorbing ? file_absorbing : file_not_absorbing,"1.0 ");
                             fflush(NULL);
@@ -214,13 +294,49 @@ void action_south(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
     }
 }
 
+void action_east_slip(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
+            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
+                if (matrix[i][j] != OBSTACLE) { 
+                    if (matrix[i][j+1] == OBSTACLE) {
+                        if (k == matrix[i][j]) {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"1.0 ");
+                        } else {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"0.0 ");
+                        }
+                    } else {
+                        if (k == matrix[i][j+1]) {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"%f ", 1.0 - slip_prob);
+                        } else if (k == matrix[i][j]) {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"%f ", slip_prob);
+                        } else {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"0.0 ");
+                        }
+                    }
+                    
+                } else if (matrix[i][j] == OBSTACLE) {
+                    break;
+                }
+            }
+            if (matrix[i][j] != OBSTACLE) 
+                fprintf(absorbing ? file_absorbing : file_not_absorbing,"\n"); 
+        }
+    }
+}
+
 void action_east(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
+
+    if (slippery) {
+        action_east_slip(matrix, absorbing);
+        return;
+    }
 
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
         for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
             for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
                 if (matrix[i][j] != OBSTACLE) {
-                    if (matrix[i][j+1] == OBSTACLE || matrix[i][j+1] == BORDER) {
+                    if (matrix[i][j+1] == OBSTACLE) {
                         if (k == matrix[i][j]) {
                             fprintf(absorbing ? file_absorbing : file_not_absorbing,"1.0 ");
                             fflush(NULL);
@@ -252,13 +368,49 @@ void action_east(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
     }
 }
 
+void action_west_slip(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
+            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
+                if (matrix[i][j] != OBSTACLE) { 
+                    if (matrix[i][j-1] == OBSTACLE) {
+                        if (k == matrix[i][j]) {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"1.0 ");
+                        } else {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"0.0 ");
+                        }
+                    } else {
+                        if (k == matrix[i][j-1]) {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"%f ", 1.0 - slip_prob);
+                        } else if (k == matrix[i][j]) {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"%f ", slip_prob);
+                        } else {
+                            fprintf(absorbing ? file_absorbing : file_not_absorbing,"0.0 ");
+                        }
+                    }
+                    
+                } else if (matrix[i][j] == OBSTACLE) {
+                    break;
+                }
+            }
+            if (matrix[i][j] != OBSTACLE) 
+                fprintf(absorbing ? file_absorbing : file_not_absorbing,"\n"); 
+        }
+    }
+}
+
 void action_west(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
+
+    if (slippery) {
+        action_west_slip(matrix, absorbing);
+        return;
+    }
 
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
         for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
             for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
                 if (matrix[i][j] != OBSTACLE) {
-                    if (matrix[i][j-1] == OBSTACLE || matrix[i][j-1] == BORDER) {
+                    if (matrix[i][j-1] == OBSTACLE) {
                         if (k == matrix[i][j]) {
                             fprintf(absorbing ? file_absorbing : file_not_absorbing,"1.0 ");
                             fflush(NULL);
@@ -321,7 +473,7 @@ void observations(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
                     }
                 }
                 failures_index++;
-            } else if ((matrix[i][j-1] == OBSTACLE || matrix[i][j-1] == BORDER) && (matrix[i][j+1] == OBSTACLE || matrix[i][j+1] == BORDER)) {
+            } else if ((matrix[i][j-1] == OBSTACLE) && (matrix[i][j+1] == OBSTACLE)) {
                 for (int k = 0; k < NUMBER_OF_OBSERVATIONS; k++) {
                     //index both observation (nutno poté dynamicky)
                     if (k == 3) {
@@ -332,7 +484,7 @@ void observations(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
                         fflush(NULL);
                     }
                 }
-            } else if (matrix[i][j-1] == OBSTACLE || matrix[i][j-1] == BORDER) {
+            } else if (matrix[i][j-1] == OBSTACLE) {
                 for (int k = 0; k < NUMBER_OF_OBSERVATIONS; k++) {
                     //index left observation (nutno poté dynamicky)
                     if (k == 0) {
@@ -343,7 +495,7 @@ void observations(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
                         fflush(NULL);
                     }
                 }
-            } else if (matrix[i][j+1] == OBSTACLE || matrix[i][j+1] == BORDER) {
+            } else if (matrix[i][j+1] == OBSTACLE) {
                 for (int k = 0; k < NUMBER_OF_OBSERVATIONS; k++) {
                     //index right observation (nutno poté dynamicky)
                     if (k == 1) {

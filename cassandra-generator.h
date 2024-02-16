@@ -23,7 +23,6 @@
 
 #define PADDING_SIZE 1
 
-#define BORDER 0
 #define OBSTACLE -1
 #define GOAL -2
 #define FAILURE -3
@@ -31,6 +30,13 @@
 #define BOUNTY -5
 
 #define NUMBER_OF_OBSERVATIONS 6
+
+typedef struct {
+    int cols;
+    int rows;
+    double slip_prob;
+
+ } arguments ;
 
 int args_parse(int argc, char **argv);
 
