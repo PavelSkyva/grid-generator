@@ -147,7 +147,7 @@ void mergeAndSortArrays(int mergedArray[], int goals[], int failures[], int trap
         }
     }
 
-    for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
+    for (int i = 0; i < size; i++) {
         mergedArray[i] = tempArray[i];
     }
 
@@ -164,8 +164,10 @@ void action_north_impass(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
             for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
                 // pokud je prekazka => preskoc
                 if (matrix[i][j] != OBSTACLE) {
-                    // north -- pokud je nad stavem prekazka, zustan v nem 
+                    // north -- pokud je nad stavem prekazka, zustan v nem
+
                     if (matrix[i-1][j] == OBSTACLE) {
+                        
                         if (k == matrix[i][j]) {
                             fprintf(absorbing ? file_absorbing : file_not_absorbing,"1.0 ");
                         } else {
@@ -254,6 +256,8 @@ void action_north(int matrix[][TOTAL_SIZE_COLS], bool absorbing) {
         action_north_slip(matrix, absorbing);
         return;
     }
+    
+
     
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
         for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
@@ -794,7 +798,7 @@ void generate_exceptions(int matrix[][TOTAL_SIZE_COLS], bool absorbing, int *spe
     goals_index = failures_index = 0;
     int special_states_array_index = 0;
     double uniform_probability = 1.0 / (AVAILABLE_STATES_COUNT - special_states_count);
-    //fprintf(stderr, "%f\nspecial_states_count:%d\navailable:%d\nresult:%d\ntest:%f\n", uniform_probability, special_states_count, AVAILABLE_STATES_COUNT, AVAILABLE_STATES_COUNT - special_states_count, uniform_probability * (AVAILABLE_STATES_COUNT - special_states_count));
+    
     fprintf(absorbing ? file_absorbing : file_not_absorbing,"\n");
     fflush(NULL);
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
@@ -804,7 +808,7 @@ void generate_exceptions(int matrix[][TOTAL_SIZE_COLS], bool absorbing, int *spe
                 fprintf(absorbing ? file_absorbing : file_not_absorbing,"T: * : %d\n", matrix[i][j]);
                 fflush(NULL);
                 if (!absorbing) {
-                    for (int k = 1; k <= AVAILABLE_STATES_COUNT; k++) {
+                    for (int k = 0; k < AVAILABLE_STATES_COUNT; k++) {
                         if (k == special_states_array[special_states_array_index]) {
                             fprintf(absorbing ? file_absorbing : file_not_absorbing,"0.0 ");
                             fflush(NULL);
@@ -843,7 +847,7 @@ void generate_exceptions(int matrix[][TOTAL_SIZE_COLS], bool absorbing, int *spe
                         }
                     }
                 } else {
-                    for (int k = 1; k <= AVAILABLE_STATES_COUNT; k++) {
+                    for (int k = 0; k < AVAILABLE_STATES_COUNT; k++) {
                         if (k == matrix[i][j]) {
                             fprintf(absorbing ? file_absorbing : file_not_absorbing,"1.0 ");
                             fflush(NULL);
@@ -857,6 +861,7 @@ void generate_exceptions(int matrix[][TOTAL_SIZE_COLS], bool absorbing, int *spe
                 fflush(NULL);
                 failures_index++;
             }
+        special_states_array_index = 0;
         }
     }
 }
@@ -897,7 +902,15 @@ int main(int argc, char **argv) {
     char *directory = (char *) malloc(50);
     input_matrix_file_string = (char*) malloc(20);
 
-    strcpy(directory, "outputs");
+
+
+    sprintf(directory, "outputs%dx%d", MATRIX_ROWS, MATRIX_COLS);
+
+    if (slippery) {
+        strcat(directory, "_slippery");
+    } else if (impassable) {
+        strcat(directory, "_impassable");
+    }
 
     if (mkdir(directory, 0755) == -1) {
         if (errno != EEXIST) {
@@ -906,7 +919,7 @@ int main(int argc, char **argv) {
         }
     }
     
-    chdir("outputs");
+    chdir(directory);
 
     int repeat_number = 1;
     char *n_abs_file_number = (char*) malloc(50);
@@ -1065,7 +1078,7 @@ int main(int argc, char **argv) {
         bool absorbing = false;
 
         for (int i = 0; i < 2; i++) {
-        
+            
         
             fprintf(absorbing ? file_absorbing : file_not_absorbing, "discount: %3f\n", discount);
             fflush(NULL);
@@ -1089,7 +1102,10 @@ int main(int argc, char **argv) {
             int size = sizes[0] + sizes[1] + sizes[2] + sizes[3];
             int mergedArray[size];
 
+            
+
             mergeAndSortArrays(mergedArray, goals, failures, traps, bounties, sizes);
+
 
             fprintf(absorbing ? file_absorbing : file_not_absorbing,"start exclude: ");
             fflush(NULL);
@@ -1102,7 +1118,15 @@ int main(int argc, char **argv) {
                 
             }
 
+            
+
             fprintf(absorbing ? file_absorbing : file_not_absorbing,"\n");
+            fflush(NULL);
+
+            fprintf(absorbing ? file_absorbing : file_not_absorbing,"T: n\n");
+            fflush(NULL);
+            action_north(matrix, absorbing);
+            fprintf(absorbing ? file_absorbing : file_not_absorbing,"\n\n");
             fflush(NULL);
             
 
@@ -1112,11 +1136,7 @@ int main(int argc, char **argv) {
             fprintf(absorbing ? file_absorbing : file_not_absorbing,"\n\n");
             fflush(NULL);
 
-            fprintf(absorbing ? file_absorbing : file_not_absorbing,"T: n\n");
-            fflush(NULL);
-            action_north(matrix, absorbing);
-            fprintf(absorbing ? file_absorbing : file_not_absorbing,"\n\n");
-            fflush(NULL);
+            
 
             fprintf(absorbing ? file_absorbing : file_not_absorbing,"T: e\n");
             fflush(NULL);

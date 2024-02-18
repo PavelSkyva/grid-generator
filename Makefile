@@ -3,7 +3,7 @@ CC=gcc
 CFLAGS= -g -Wall -Wextra -std=c17 -pedantic -lm 
 
 
-EX= cassandra-generator
+EX= cassandra_generator
 
 #sem vepsat vzdy kazdy novy soubor (s priponou .o)
 SRC= cassandra-generator.o grid-generator.o
@@ -14,4 +14,5 @@ all: $(SRC)
 clean: #smaz vsechny object files a binarky 
 		$(RM) $(SRC) $(EX)
 		find . -type f -name '*.pomdp' -exec $(RM) {} +
+		find . -type f -name '*.txt' -exec $(RM) {} +
 		find . -type d -empty -delete
