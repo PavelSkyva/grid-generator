@@ -4,20 +4,24 @@ make clean
 make
 
 echo "Starting generating..."
-ROWS=5
-COLS=5
+ROWS_CAP=10
+COLS_CAP=10
+ROWS_START=8
+COLS_START=8
+ROWS=$ROWS_START
+COLS=$COLS_START
 SAMPLES=1
-TIMEOUT=20
+TIMEOUT=1
 
 
-while [ $ROWS -le 10 ]; do
-	while [ $COLS -le 10 ]; do
+while [ $ROWS -le $ROWS_CAP ]; do
+	while [ $COLS -le $COLS_CAP ]; do
 		./cassandra_generator -rows $ROWS -cols $COLS -samples $SAMPLES --slippery 0.2
 		./cassandra_generator -rows $ROWS -cols $COLS -samples $SAMPLES --impass 0.2
 		((COLS++))
 	done
 	((ROWS++))
-	COLS=5
+	COLS=$COLS_START
 done
 
 echo "Generating complete."
@@ -29,46 +33,128 @@ cd ..
 cd sarsop
 cd src
 
-ROWS=5
-COLS=5
+ROWS=$ROWS_START
+COLS=$COLS_START
 
 
-ROWS=5
-COLS=5
+echo "----------------------------------------------------------------------------------------"
+echo ""
+echo ""
+echo ""
+echo ""
+echo ""
+echo "STARTING SARSOP ANALYSIS"
+echo ""
+echo ""
+echo ""
+echo ""
+echo ""
+echo "----------------------------------------------------------------------------------------"
 
-while [ $ROWS -le 10 ]; do
-    while [ $COLS -le 10 ]; do
-        i=1  # Initialize i before entering the innermost loop
+
+while [ $ROWS -le $ROWS_CAP ]; do
+    while [ $COLS -le $COLS_CAP ]; do
+        i=1 
         while [ $i -le $SAMPLES ]; do 
-            timeout ${TIMEOUT} ./pomdpsol ../../synthesis/models/cassandra/grid-generator/outputs${ROWS}x${COLS}_impassable/output${i}/absorbing_${i}.pomdp > ../..//synthesis/models/cassandra/grid-generator/outputs${ROWS}x${COLS}_impassable/output${i}/sarsop_output${i}_absorbing.txt
+            timeout ${TIMEOUT} ./pomdpsol ../../synthesis/models/cassandra/grid-generator/outputs${ROWS}x${COLS}_impassable/output${i}/absorbing.pomdp > ../../synthesis/models/cassandra/grid-generator/outputs${ROWS}x${COLS}_impassable/output${i}/sarsop_output_absorbing.txt
             if [ $? -eq 124 ]; then
-			    echo "Analysis of outputs${ROWS}x${COLS}_impassable/output${i}/absorbing_${i}.pomdp timed out."
+			    echo "Analysis of outputs${ROWS}x${COLS}_impassable/output${i}/absorbing.pomdp timed out."
 			else
-			    echo "Analysis of outputs${ROWS}x${COLS}_impassable/output${i}/absorbing_${i}.pomdp completed."
+			    echo "Analysis of outputs${ROWS}x${COLS}_impassable/output${i}/absorbing.pomdp completed."
 			fi
-            timeout ${TIMEOUT} ./pomdpsol ../../synthesis/models/cassandra/grid-generator/outputs${ROWS}x${COLS}_impassable/output${i}/not_absorbing_${i}.pomdp > ../..//synthesis/models/cassandra/grid-generator/outputs${ROWS}x${COLS}_impassable/output${i}/sarsop_output${i}_not_absorbing.txt
+            timeout ${TIMEOUT} ./pomdpsol ../../synthesis/models/cassandra/grid-generator/outputs${ROWS}x${COLS}_impassable/output${i}/not_absorbing.pomdp > ../..//synthesis/models/cassandra/grid-generator/outputs${ROWS}x${COLS}_impassable/output${i}/sarsop_output_not_absorbing.txt
             if [ $? -eq 124 ]; then
-			    echo "Analysis of outputs${ROWS}x${COLS}_impassable/output${i}/not_absorbing_${i}.pomdp timed out."
+			    echo "Analysis of outputs${ROWS}x${COLS}_impassable/output${i}/not_absorbing.pomdp timed out."
 			else
-			    echo "Analysis of outputs${ROWS}x${COLS}_impassable/output${i}/not_absorbing_${i}.pomdp completed."
+			    echo "Analysis of outputs${ROWS}x${COLS}_impassable/output${i}/not_absorbing.pomdp completed."
 			fi
-            ((i++))  # Update i within the loop
+			timeout ${TIMEOUT} ./pomdpsol ../../synthesis/models/cassandra/grid-generator/outputs${ROWS}x${COLS}_slippery/output${i}/absorbing.pomdp > ../..//synthesis/models/cassandra/grid-generator/outputs${ROWS}x${COLS}_slippery/output${i}/sarsop_output_absorbing.txt
+			if [ $? -eq 124 ]; then
+			    echo "Analysis of outputs${ROWS}x${COLS}_slippery/output${i}/absorbing.pomdp timed out."
+			else
+			    echo "Analysis of outputs${ROWS}x${COLS}_slippery/output${i}/absorbing.pomdp completed."
+			fi
+			timeout ${TIMEOUT} ./pomdpsol ../../synthesis/models/cassandra/grid-generator/outputs${ROWS}x${COLS}_slippery/output${i}/not_absorbing.pomdp > ../..//synthesis/models/cassandra/grid-generator/outputs${ROWS}x${COLS}_slippery/output${i}/sarsop_output_not_absorbing.txt
+			if [ $? -eq 124 ]; then
+			    echo "Analysis of outputs${ROWS}x${COLS}_slippery/output${i}/not_absorbing.pomdp timed out."
+			else
+			    echo "Analysis of outputs${ROWS}x${COLS}_slippery/output${i}/not_absorbing.pomdp completed."
+			fi
+            ((i++))
         done
         ((COLS++))
     done
     ((ROWS++))
-    COLS=5
+    COLS=$COLS_START
 done 
 
+cd ..
+cd ..
+cd synthesis
+source prerequisites/venv/bin/activate
+ROWS=$ROWS_START
+COLS=$COLS_START
+
+echo "----------------------------------------------------------------------------------------"
+echo ""
+echo ""
+echo ""
+echo ""
+echo ""
+echo "STARTING PAYNT ANALYSIS"
+echo ""
+echo ""
+echo ""
+echo ""
+echo ""
+echo "----------------------------------------------------------------------------------------"
+pwd
+ls
+
+while [ $ROWS -le $ROWS_CAP ]; do
+    while [ $COLS -le $COLS_CAP ]; do
+        i=1 
+        while [ $i -le $SAMPLES ]; do 
+            timeout ${TIMEOUT} python3 paynt.py --project models/cassandra/ --props max_discounted_reward.props --sketch grid-generator/outputs${ROWS}x${COLS}_impassable/output${i}/absorbing.pomdp > ./models/cassandra/grid-generator/outputs${ROWS}x${COLS}_impassable/output${i}/paynt_output_absorbing.txt
+            if [ $? -eq 124 ]; then
+			    echo "Analysis of outputs${ROWS}x${COLS}_impassable/output${i}/absorbing.pomdp timed out."
+			else
+			    echo "Analysis of outputs${ROWS}x${COLS}_impassable/output${i}/absorbing.pomdp completed."
+			fi
+            timeout ${TIMEOUT} python3 paynt.py --project models/cassandra/ --props max_discounted_reward.props --sketch grid-generator/outputs${ROWS}x${COLS}_impassable/output${i}/not_absorbing.pomdp > models/cassandra/grid-generator/outputs${ROWS}x${COLS}_impassable/output${i}/paynt_output_not_absorbing.txt
+            if [ $? -eq 124 ]; then
+			    echo "Analysis of outputs${ROWS}x${COLS}_impassable/output${i}/not_absorbing.pomdp timed out."
+			else
+			    echo "Analysis of outputs${ROWS}x${COLS}_impassable/output${i}/not_absorbing.pomdp completed."
+			fi
+			timeout ${TIMEOUT} python3 paynt.py --project models/cassandra/ --props max_discounted_reward.props --sketch grid-generator/outputs${ROWS}x${COLS}_slippery/output${i}/absorbing.pomdp > models/cassandra/grid-generator/outputs${ROWS}x${COLS}_slippery/output${i}/paynt_output_absorbing.txt
+			if [ $? -eq 124 ]; then
+			    echo "Analysis of outputs${ROWS}x${COLS}_slippery/output${i}/absorbing.pomdp timed out."
+			else
+			    echo "Analysis of outputs${ROWS}x${COLS}_slippery/output${i}/absorbing.pomdp completed."
+			fi
+			timeout ${TIMEOUT} python3 paynt.py --project models/cassandra/ --props max_discounted_reward.props --sketch grid-generator/outputs${ROWS}x${COLS}_slippery/output${i}/not_absorbing.pomdp > models/cassandra/grid-generator/outputs${ROWS}x${COLS}_slippery/output${i}/paynt_output_not_absorbing.txt
+			if [ $? -eq 124 ]; then
+			    echo "Analysis of outputs${ROWS}x${COLS}_slippery/output${i}/not_absorbing.pomdp timed out."
+			else
+			    echo "Analysis of outputs${ROWS}x${COLS}_slippery/output${i}/not_absorbing.pomdp completed."
+			fi
+            ((i++))
+        done
+        ((COLS++))
+    done
+    ((ROWS++))
+    COLS=$COLS_START
+done
 
 
-
-
-
-
-#source prerequisites/venv/bin/activate
 #python3 paynt.py --project models/cassandra/ --props max_discounted_reward.props --sketch grid-generator/outputs5x5_impassable/output1/absorbing_1.pomdp
 
 
-
+echo ""
+echo ""
+echo ""
+echo ""
+echo ""
+echo "----------------------------------------------------------------------------------------"
 echo "Analysis complete."

@@ -935,9 +935,9 @@ int main(int argc, char **argv) {
             }
         }
 
-        sprintf(input_matrix_file_string, "in%d.pomdp", repeat_number);
-        sprintf(n_abs_file_number, "not_absorbing_%d.pomdp", repeat_number);
-        sprintf(abs_file_number, "absorbing_%d.pomdp", repeat_number);
+        sprintf(input_matrix_file_string, "in.pomdp");
+        sprintf(n_abs_file_number, "not_absorbing.pomdp");
+        sprintf(abs_file_number, "absorbing.pomdp");
 
         chdir(directory);
 
