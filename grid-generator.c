@@ -67,17 +67,19 @@ int grid_generation(int rows, int cols, char* filename) {
         if (matrix[i] == ' ') {
             random_number = rand() / (RAND_MAX + 1.0);
             //pod 10% 
-            if (random_number < 0.1) {
+            if (random_number < 0.2) {
                 matrix[i] = '#';
             //pod 12.5%
+            /*
             } else if (random_number < 0.125){
                 matrix[i] = 'T';
             //pod 15%
             } else if (random_number < 0.15){
                 matrix[i] = 'B';
-            } else if (random_number < 0.165) {
+            */
+            } else if (random_number < 0.225) {
                 matrix[i] = 'G';
-            } else if (random_number < 0.18) {
+            } else if (random_number < 0.250) {
                 matrix[i] = 'F';
             }
             //jinak zustava mezera

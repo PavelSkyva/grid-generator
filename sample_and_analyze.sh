@@ -6,18 +6,20 @@ make
 echo "Starting generating..."
 ROWS_CAP=10
 COLS_CAP=10
-ROWS_START=8
-COLS_START=8
+ROWS_START=5
+COLS_START=5
 ROWS=$ROWS_START
 COLS=$COLS_START
 SAMPLES=1
-TIMEOUT=1
+TIMEOUT=30
+SLIPPERY_PROB=0.2
+IMPASS_PROB=0.2
 
 
 while [ $ROWS -le $ROWS_CAP ]; do
 	while [ $COLS -le $COLS_CAP ]; do
-		./cassandra_generator -rows $ROWS -cols $COLS -samples $SAMPLES --slippery 0.2
-		./cassandra_generator -rows $ROWS -cols $COLS -samples $SAMPLES --impass 0.2
+		./cassandra_generator -rows $ROWS -cols $COLS -samples $SAMPLES --slippery $SLIPPERY_PROB
+		./cassandra_generator -rows $ROWS -cols $COLS -samples $SAMPLES --impass $IMPASS_PROB
 		((COLS++))
 	done
 	((ROWS++))
@@ -108,8 +110,6 @@ echo ""
 echo ""
 echo ""
 echo "----------------------------------------------------------------------------------------"
-pwd
-ls
 
 while [ $ROWS -le $ROWS_CAP ]; do
     while [ $COLS -le $COLS_CAP ]; do
