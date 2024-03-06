@@ -40,6 +40,17 @@ bool slippery = false;
 double impass_prob;
 bool impassable = false;
 
+//-------------------------BOOLY PRO AKCE--------------------------------------
+bool north = false;
+bool south = false;
+bool west = false;
+bool east = false;
+bool northwest = false;
+bool northeast = false;
+bool southwest = false;
+bool southeast = false;
+//-----------------------------------------------------------------------------
+
 
 
 // ------------------------HODNOTY NA UPRAVOVANI-------------------------------
@@ -691,6 +702,202 @@ void action_west(int matrix[][TOTAL_SIZE_COLS]) {
     }
 }
 
+void action_northwest(int matrix[][TOTAL_SIZE_COLS]) {
+
+    /*
+    if (impassable) {
+        action_west_impass(matrix);
+        return;
+    } else if (slippery) {
+        action_west_slip(matrix);
+        return;
+    }
+    */
+
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
+            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
+                if (matrix[i][j] != OBSTACLE) {
+                    if (matrix[i-1][j-1] == OBSTACLE) {
+                        if (k == matrix[i][j]) {
+                            fprintf(file_absorbing,"1.0 ");
+                            fflush(NULL);
+
+                        } else {
+                            fprintf(file_absorbing,"0.0 ");
+                            fflush(NULL);
+                        }
+                    } else {
+                        if (k == matrix[i-1][j-1]) {
+                            fprintf(file_absorbing,"1.0 ");
+                            fflush(NULL);
+                        } else {
+                            fprintf(file_absorbing,"0.0 ");
+                            fflush(NULL);
+                        }
+                    }
+                    
+                } else if (matrix[i][j] == OBSTACLE) {
+                    break;
+                }
+            }
+            //aby nebyly mezi transition maticema mezery
+            if (matrix[i][j] != OBSTACLE) {
+                fprintf(file_absorbing,"\n"); 
+                fflush(NULL);
+            }
+                
+        }
+    }
+}
+
+void action_northeast(int matrix[][TOTAL_SIZE_COLS]) {
+
+    /*
+    if (impassable) {
+        action_west_impass(matrix);
+        return;
+    } else if (slippery) {
+        action_west_slip(matrix);
+        return;
+    }
+    */
+
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
+            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
+                if (matrix[i][j] != OBSTACLE) {
+                    if (matrix[i-1][j+1] == OBSTACLE) {
+                        if (k == matrix[i][j]) {
+                            fprintf(file_absorbing,"1.0 ");
+                            fflush(NULL);
+
+                        } else {
+                            fprintf(file_absorbing,"0.0 ");
+                            fflush(NULL);
+                        }
+                    } else {
+                        if (k == matrix[i-1][j+1]) {
+                            fprintf(file_absorbing,"1.0 ");
+                            fflush(NULL);
+                        } else {
+                            fprintf(file_absorbing,"0.0 ");
+                            fflush(NULL);
+                        }
+                    }
+                    
+                } else if (matrix[i][j] == OBSTACLE) {
+                    break;
+                }
+            }
+            //aby nebyly mezi transition maticema mezery
+            if (matrix[i][j] != OBSTACLE) {
+                fprintf(file_absorbing,"\n"); 
+                fflush(NULL);
+            }
+                
+        }
+    }
+}
+
+void action_southeast(int matrix[][TOTAL_SIZE_COLS]) {
+
+    /*
+    if (impassable) {
+        action_west_impass(matrix);
+        return;
+    } else if (slippery) {
+        action_west_slip(matrix);
+        return;
+    }
+    */
+
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
+            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
+                if (matrix[i][j] != OBSTACLE) {
+                    if (matrix[i+1][j+1] == OBSTACLE) {
+                        if (k == matrix[i][j]) {
+                            fprintf(file_absorbing,"1.0 ");
+                            fflush(NULL);
+
+                        } else {
+                            fprintf(file_absorbing,"0.0 ");
+                            fflush(NULL);
+                        }
+                    } else {
+                        if (k == matrix[i+1][j+1]) {
+                            fprintf(file_absorbing,"1.0 ");
+                            fflush(NULL);
+                        } else {
+                            fprintf(file_absorbing,"0.0 ");
+                            fflush(NULL);
+                        }
+                    }
+                    
+                } else if (matrix[i][j] == OBSTACLE) {
+                    break;
+                }
+            }
+            //aby nebyly mezi transition maticema mezery
+            if (matrix[i][j] != OBSTACLE) {
+                fprintf(file_absorbing,"\n"); 
+                fflush(NULL);
+            }
+                
+        }
+    }
+}
+
+void action_southwest(int matrix[][TOTAL_SIZE_COLS]) {
+
+    /*
+    if (impassable) {
+        action_west_impass(matrix);
+        return;
+    } else if (slippery) {
+        action_west_slip(matrix);
+        return;
+    }
+    */
+
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
+            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
+                if (matrix[i][j] != OBSTACLE) {
+                    if (matrix[i+1][j-1] == OBSTACLE) {
+                        if (k == matrix[i][j]) {
+                            fprintf(file_absorbing,"1.0 ");
+                            fflush(NULL);
+
+                        } else {
+                            fprintf(file_absorbing,"0.0 ");
+                            fflush(NULL);
+                        }
+                    } else {
+                        if (k == matrix[i+1][j-1]) {
+                            fprintf(file_absorbing,"1.0 ");
+                            fflush(NULL);
+                        } else {
+                            fprintf(file_absorbing,"0.0 ");
+                            fflush(NULL);
+                        }
+                    }
+                    
+                } else if (matrix[i][j] == OBSTACLE) {
+                    break;
+                }
+            }
+            //aby nebyly mezi transition maticema mezery
+            if (matrix[i][j] != OBSTACLE) {
+                fprintf(file_absorbing,"\n"); 
+                fflush(NULL);
+            }
+                
+        }
+    }
+}
+
 void observations(int matrix[][TOTAL_SIZE_COLS]) {
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
         for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
@@ -1135,6 +1342,30 @@ int main(int argc, char **argv) {
         fprintf(file_absorbing,"T: w\n");
         fflush(NULL);
         action_west(matrix);
+        fprintf(file_absorbing,"\n\n");
+        fflush(NULL);
+
+        fprintf(file_absorbing,"T: nw\n");
+        fflush(NULL);
+        action_northwest(matrix);
+        fprintf(file_absorbing,"\n\n");
+        fflush(NULL);
+
+        fprintf(file_absorbing,"T: ns\n");
+        fflush(NULL);
+        action_northeast(matrix);
+        fprintf(file_absorbing,"\n\n");
+        fflush(NULL);
+
+        fprintf(file_absorbing,"T: sw\n");
+        fflush(NULL);
+        action_southwest(matrix);
+        fprintf(file_absorbing,"\n\n");
+        fflush(NULL);
+
+        fprintf(file_absorbing,"T: se\n");
+        fflush(NULL);
+        action_southeast(matrix);
         fprintf(file_absorbing,"\n\n");
         fflush(NULL);
 
