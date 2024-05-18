@@ -41,6 +41,7 @@ double impass_prob;
 bool impassable = false;
 
 //-------------------------BOOLY PRO AKCE--------------------------------------
+#define NUMBER_OF_ACTIONS 8
 bool north = false;
 bool south = false;
 bool west = false;
@@ -65,27 +66,32 @@ int repeat_count;
 // ----------------------------------------------------------------------------
 
 
+
+//------------------------------------------------------------------------------
+
+
+void actions_parse(char *action_string) {
+    north = (action_string[0] == '1') ? true : false;
+    south = (action_string[1] == '1') ? true : false;
+    west = (action_string[2] == '1') ? true : false;
+    east = (action_string[3] == '1') ? true : false;
+    northwest = (action_string[4] == '1') ? true : false;
+    northeast = (action_string[5] == '1') ? true : false;
+    southwest = (action_string[6] == '1') ? true : false;
+    southeast = (action_string[7] == '1') ? true : false;
+}
+
+
 int args_parse(int argc, char **argv) {
-    //zpracovat argumenty
-    //vymyslet prepinace
     /*
     ----co predavat: -----------------------------------------------
     obrazek matice
     # - prekazky
-    G v obrazku - cile
-    F v obrazku - neuspech
-    T v obrazku - pasti
-    B - odmeny
-
-    --- dalsi obrazek -- zjednouduseny ------------------------------------
-    * - kluzke prostredi (zmeni se smer akce)
-    ! - nepruchodne prostredi (tezko se dostava do dalsich stavu)
 
     --- ostatni parametry--------------------------------------------------
     nazvy akci oddelene carkou (n,s,e,w) --- prepinac -actions
     discount (mensi nez 1) --- prepinac -discount   (u akci a discountu udelat implicitni, pokud nebude zadano z radky)
     mozna nahodne rozmisteni prekazek, pasti a odmen, pokud nemame specifické pozadavky
-    rozmery gridu!!!!
 
     */
 
@@ -102,7 +108,6 @@ int args_parse(int argc, char **argv) {
                 fprintf(stderr, "Error: Failed to allocate memory for input_matrix_file_string\n");
                 return 1;
             }
-            printf("\n%s\n", input_matrix_file_string);
             grid_given = true;
             repeat_count = 1;
             
@@ -114,7 +119,7 @@ int args_parse(int argc, char **argv) {
             slippery = true;
         } else if (strcmp(argv[i], "-samples") == 0) {
             if (grid_given) {
-                printf("\nIF GRID WAS GIVEN ONLY 1 SAMPLE CAN BE GENERATED!\n");
+                printf("\nIF GRID WAS GIVEN ONLY 1 FILE WILL BE GENERATED!\n");
                 repeat_count = 1;
             } else {
                 repeat_count = atoi(argv[i+1]);
@@ -124,8 +129,24 @@ int args_parse(int argc, char **argv) {
             MATRIX_ROWS = atoi(argv[i+1]);
         } else if (strcmp(argv[i], "-cols") == 0) {
             MATRIX_COLS = atoi(argv[i+1]);
+        } else if (strcmp(argv[i], "-actions") == 0) {
+            if (strlen(argv[i+1]) < NUMBER_OF_ACTIONS) {
+                printf("prepinac -actions -------- JE TREBA ZADAT STRING O DELCE %d\n", NUMBER_OF_ACTIONS);
+                return 1;
+            } else {    
+                actions_parse(argv[i+1]);
+            }
+        } else if (strcmp(argv[i], "-discount") == 0) {
+            discount = strtod(argv[i+1], NULL);
+
         } else if (strcmp(argv[i], "--help") == 0) {
-            printf("Spousteni skriptu:\n\t./cassandra-generator \n\t-matrix <nazev souboru s obrazkem matice> \n\t-rows <pocet_radku> \n\t-cols <pocet_sloupcu> \n\t--impass <pravdepodobnost, ze agent uklouzne> \n\t--slippery <pravdepodobnost, ze agent pujde kolmo k dané akci> \n\t-samples <pocet vygenerovanych ukazek>\n\n(Na poradi parametru nezalezi)\n");
+            printf("Spousteni skriptu:\n\t./cassandra_generator \n\t-matrix <nazev souboru s obrazkem matice> \n\t-rows <pocet_radku>");
+            printf("\n\t-discount <zadana hodnota discountu>");
+            printf("\n\t-cols <pocet_sloupcu> \n\t--impass <pravdepodobnost, ze agent uklouzne> \n\t--slippery <pravdepodobnost, ze agent pujde kolmo k dané akci>");
+            printf("\n\t-samples <pocet vygenerovanych ukazek>");
+            printf("\n\t-actions xxxxxxxx (n, s , e , w, ne, nw, se, sw), 1 pokud se má akce použít, cokoli jiného a akce nebude použita (je nutno ale zadat celý string)");
+            printf("\n\n(Na poradi parametru nezalezi)\n");
+            
             return 1;
         } else {
             printf("Spatne zadane parametry, zkuste --help\n");
@@ -342,7 +363,7 @@ void action_south_impass(int matrix[][TOTAL_SIZE_COLS]) {
 void action_south_slip(int matrix[][TOTAL_SIZE_COLS]) {
     //pro vyrovavani, pokud na strane, kam agent uklouzl, je prekazka
     double slip_help = 0.0;
-    // booly, aby se zabranilo tisknuti pri prekazkach
+    //booly, aby se zabranilo tisknuti pri prekazkach
     bool do_not_print_l = false;
     bool do_not_print_r = false;
 
@@ -899,11 +920,14 @@ void action_southwest(int matrix[][TOTAL_SIZE_COLS]) {
 }
 
 void observations(int matrix[][TOTAL_SIZE_COLS]) {
+    goals_index = failures_index = traps_index = bounties_index = 0;
+    
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
         for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
             if (matrix[i][j] == OBSTACLE) {
                 continue;
             } else if (matrix[i][j] == goals[goals_index]) {
+                printf("state_number:%d...........goals:%d.....goals_index:%d\n", matrix[i][j], goals[goals_index], goals_index);
                 for (int k = 0; k < NUMBER_OF_OBSERVATIONS; k++) {
                     //index good observation (nutno poté dynamicky)
                     if (k == 4) {
@@ -1313,61 +1337,76 @@ int main(int argc, char **argv) {
                 fprintf(file_absorbing,"%d ", i);
             }
             
-        }
-
-            
+        }     
 
         fprintf(file_absorbing,"\n");
         fflush(NULL);
 
-        fprintf(file_absorbing,"T: n\n");
-        fflush(NULL);
-        action_north(matrix);
-        fprintf(file_absorbing,"\n\n");
-        fflush(NULL);
-            
+        if (north) {
+            fprintf(file_absorbing,"T: n\n");
+            fflush(NULL);
+            action_north(matrix);
+            fprintf(file_absorbing,"\n\n");
+            fflush(NULL);
+        }
+        
+        if (south) {
+            fprintf(file_absorbing,"T: s\n");
+            fflush(NULL);
+            action_south(matrix);
+            fprintf(file_absorbing,"\n\n");
+            fflush(NULL); 
+        }    
 
-        fprintf(file_absorbing,"T: s\n");
-        fflush(NULL);
-        action_south(matrix);
-        fprintf(file_absorbing,"\n\n");
-        fflush(NULL);   
+        if (east) {
+            fprintf(file_absorbing,"T: e\n");
+            fflush(NULL);
+            action_east(matrix);
+            fprintf(file_absorbing,"\n\n");
+            fflush(NULL);
+        }
 
-        fprintf(file_absorbing,"T: e\n");
-        fflush(NULL);
-        action_east(matrix);
-        fprintf(file_absorbing,"\n\n");
-        fflush(NULL);
+        if (west) {
+            fprintf(file_absorbing,"T: w\n");
+            fflush(NULL);
+            action_west(matrix);
+            fprintf(file_absorbing,"\n\n");
+            fflush(NULL);
+        }
 
-        fprintf(file_absorbing,"T: w\n");
-        fflush(NULL);
-        action_west(matrix);
-        fprintf(file_absorbing,"\n\n");
-        fflush(NULL);
+        if (northwest) {
+            fprintf(file_absorbing,"T: nw\n");
+            fflush(NULL);
+            action_northwest(matrix);
+            fprintf(file_absorbing,"\n\n");
+            fflush(NULL);
+        }
 
-        fprintf(file_absorbing,"T: nw\n");
-        fflush(NULL);
-        action_northwest(matrix);
-        fprintf(file_absorbing,"\n\n");
-        fflush(NULL);
+        if (northeast) {
+            fprintf(file_absorbing,"T: ns\n");
+            fflush(NULL);
+            action_northeast(matrix);
+            fprintf(file_absorbing,"\n\n");
+            fflush(NULL);
+        }
 
-        fprintf(file_absorbing,"T: ns\n");
-        fflush(NULL);
-        action_northeast(matrix);
-        fprintf(file_absorbing,"\n\n");
-        fflush(NULL);
+        if (southwest) {
+            fprintf(file_absorbing,"T: sw\n");
+            fflush(NULL);
+            action_southwest(matrix);
+            fprintf(file_absorbing,"\n\n");
+            fflush(NULL);
+        }
 
-        fprintf(file_absorbing,"T: sw\n");
-        fflush(NULL);
-        action_southwest(matrix);
-        fprintf(file_absorbing,"\n\n");
-        fflush(NULL);
+        if (southeast) {
+            fprintf(file_absorbing,"T: se\n");
+            fflush(NULL);
+            action_southeast(matrix);
+            fprintf(file_absorbing,"\n\n");
+            fflush(NULL);
+        }
 
-        fprintf(file_absorbing,"T: se\n");
-        fflush(NULL);
-        action_southeast(matrix);
-        fprintf(file_absorbing,"\n\n");
-        fflush(NULL);
+        
 
         generate_exceptions(matrix);
 
