@@ -29,7 +29,6 @@
 #define TRAP -4
 #define BOUNTY -5
 
-#define NUMBER_OF_OBSERVATIONS 6
 
 typedef struct {
     int cols;
