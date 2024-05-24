@@ -991,12 +991,22 @@ void observations(int matrix[][TOTAL_SIZE_COLS]) {
     fprintf(file_absorbing,"O: *\n");
     fprintf(file_absorbing,"#0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17\n");
     
+    /**
+     * 
+     * 
+     * IN CASE OF ADDING MORE OBSERVATIONS k indexes must be replaced with string comparison!!!!!!!!!!!
+     * 
+     * 
+    */
+
+
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
         for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
             if (matrix[i][j] == OBSTACLE) {
                 continue;
             } else if (matrix[i][j] == goals[goals_index]) {
                 for (int k = 0; k < observation_count; k++) {
+                    
                     //index good observation
                     //strcasecmp(observations_array[k], "good")
                     if (k == 17) {
