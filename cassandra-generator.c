@@ -213,52 +213,21 @@ void mergeAndSortArrays(int mergedArray[], int goals[], int failures[], int trap
 }
 
 void cassandra_header() {
-            
-    fprintf(file_absorbing, "discount: %3f\n", discount);
-    //fflush(NULL);
 
-    fprintf(file_absorbing,"values: reward\n");
-    //fflush(NULL);
+    fprintf(file_absorbing, "@type: POMDP\n");
 
-    fprintf(file_absorbing,"states: %d\n", AVAILABLE_STATES_COUNT);
-    //fflush(NULL);
+    fprintf(file_absorbing, "@parameters\n\n");
 
-    //do pole retezcu
-    fprintf(file_absorbing, "actions:");
-    if (north) {
-        fprintf(file_absorbing, " n");
-    }
-    if (south) {
-        fprintf(file_absorbing, " s");
-    }
-    if (east) {
-        fprintf(file_absorbing, " e");
-    }
-    if (west) {
-        fprintf(file_absorbing, " w");
-    }
-    if (northeast) {
-        fprintf(file_absorbing, " ne");
-    }
-    if (northwest) {
-        fprintf(file_absorbing, " nw");
-    }
-    if (southeast) {
-        fprintf(file_absorbing, " se");
-    }
-    if (southwest) {
-        fprintf(file_absorbing, " sw");
-    }
-    fprintf(file_absorbing, "\n");
+    fprintf(file_absorbing, "@reward_models\n");
 
-    fprintf(file_absorbing, "observations: ");
+    //muze byt vic rewardu, takze sem pridavat
+    fprintf(file_absorbing, "reward\n");
 
-    for (int i = 0; i < observation_count; i++)
-    {
-        fprintf(file_absorbing, "%s ", observations_array[i]);
-    }
-    
-    fprintf(file_absorbing, "\n");
+    fprintf(file_absorbing, "@nr_states\n%d\n", AVAILABLE_STATES_COUNT);
+
+    fprintf(file_absorbing, "@nr_choices\n DOMYSLET POTOM");
+
+    fprintf(file_absorbing, "@model\n");
 
 }
 
@@ -984,201 +953,43 @@ void action_southwest(int matrix[][TOTAL_SIZE_COLS]) {
     }
 }
 
-void observations(int matrix[][TOTAL_SIZE_COLS]) {
-    goals_index = failures_index = traps_index = bounties_index = 0;
-    fprintf(file_absorbing, "# 0none 1L 2R 3U 4D 5L-R 6L-U 7L-D 8R-U 9R-D 10U-D 11L-R-U 12L-R-D 13L-U-D 14R-U-D 15all 16bad 17good\n");
+int observations(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
 
-    fprintf(file_absorbing,"O: *\n");
-    fprintf(file_absorbing,"#0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17\n");
-    
-    /**
-     * 
-     * 
-     * IN CASE OF ADDING MORE OBSERVATIONS k indexes must be replaced with string comparison!!!!!!!!!!!
-     * 
-     * 
-    */
-
-
-    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            if (matrix[i][j] == OBSTACLE) {
-                continue;
-            } else if (matrix[i][j] == goals[goals_index]) {
-                for (int k = 0; k < observation_count; k++) {
-                    
-                    //index good observation
-                    //strcasecmp(observations_array[k], "good")
-                    if (k == 17) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-                goals_index++;
-
-            } else if (matrix[i][j] == failures[failures_index]) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index bad observation
-                    //strcasecmp(observations_array[k], "bad")
-                    if (k == 16) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-                failures_index++;
-
-            } else if ((matrix[i][j-1] == OBSTACLE) && (matrix[i][j+1] == OBSTACLE) && (matrix[i+1][j] == OBSTACLE) && (matrix[i-1][j] == OBSTACLE)) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index all observation
-                    //strcasecmp(observations_array[k], "all")
-                    if (k == 15) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else if ((matrix[i][j+1] == OBSTACLE) && (matrix[i-1][j] == OBSTACLE) && (matrix[i+1][j] == OBSTACLE)) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index R-U-D (right-up-down)
-                    //strcasecmp(observations_array[k], "R-U-D"), obdobne u vsech dalsich
-                    if (k == 14) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else if ((matrix[i][j-1] == OBSTACLE) && (matrix[i-1][j] == OBSTACLE) && (matrix[i+1][j] == OBSTACLE)) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index L-U-D (left-up-down)
-                    if (k == 13) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else if ((matrix[i][j-1] == OBSTACLE) && (matrix[i][j+1] == OBSTACLE) && (matrix[i+1][j] == OBSTACLE)) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index L-R-D
-                    if (k == 12) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else if ((matrix[i][j-1] == OBSTACLE) && (matrix[i][j+1] == OBSTACLE) && (matrix[i-1][j] == OBSTACLE)) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index L-R-U
-                    if (k == 11) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else if ((matrix[i-1][j] == OBSTACLE) && (matrix[i+1][j] == OBSTACLE)) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index U-D
-                    if (k == 10) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else if ((matrix[i][j+1] == OBSTACLE) && (matrix[i+1][j] == OBSTACLE)) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index R-D
-                    if (k == 9) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else if ((matrix[i][j+1] == OBSTACLE) && (matrix[i-1][j] == OBSTACLE)) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index R-U
-                    if (k == 8) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else if ((matrix[i][j-1] == OBSTACLE) && (matrix[i+1][j] == OBSTACLE)) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index L-D
-                    if (k == 7) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else if ((matrix[i][j-1] == OBSTACLE) && (matrix[i-1][j] == OBSTACLE)) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index L-U
-                    if (k == 6) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else if ((matrix[i][j-1] == OBSTACLE) && (matrix[i][j+1] == OBSTACLE)) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index L-R
-                    if (k == 5) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else if (matrix[i+1][j] == OBSTACLE) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index D
-                    if (k == 4) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else if (matrix[i-1][j] == OBSTACLE) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index U
-                    if (k == 3) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else if (matrix[i][j+1] == OBSTACLE) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index R
-                    if (k == 2) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else if (matrix[i][j-1] == OBSTACLE) {
-                for (int k = 0; k < observation_count; k++) {
-                    //index L
-                    if (k == 1) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            } else {
-                for (int k = 0; k < observation_count; k++) {
-                    //index none
-                    if (k == 0) {
-                        fprintf(file_absorbing,"1.0 ");
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                    }
-                }
-            }
-        fprintf(file_absorbing,"\n");
+    for (int k = 0; i < goals_index; k++) {
+        if (matrix[i][j] == goals[k]) {
+            return GOOD;
         }
     }
+
+    for (int k = 0; i < failures_index; k++) {
+        if (matrix[i][j] == failures[k]) {
+            return BAD;
+        }
+    }
+
+    // binárně    left|right|up|down
+
+    int obstacles = 0;
+
+    //nalevo
+    if (matrix[i-1][j] == OBSTACLE) {
+        obstacles += 8;
+    }
+    //napravo
+    if (matrix[i+1][j] == OBSTACLE) {
+        obstacles += 4;
+    }
+    //nahore
+    if (matrix[i][j-1] == OBSTACLE) {
+        obstacles += 2;
+    }
+    //dole
+    if (matrix[i][j+1] == OBSTACLE) {
+        obstacles += 1;
+    }
+
+    return obstacles;
+
 }
 
 void rewards(int matrix[][TOTAL_SIZE_COLS]) {
@@ -1356,8 +1167,6 @@ int main(int argc, char **argv) {
 
         
         sprintf(abs_file_number, "absorbing.pomdp");
-
-        
     
         FILE *input_matrix_file = fopen(input_matrix_file_string, "r+");
         
@@ -1416,15 +1225,20 @@ int main(int argc, char **argv) {
         // promenna pro pocty jednotlivych specialnich stavu, pouzito ve fci mergeAndSortArrays
         int sizes[] = {goals_index, failures_index, traps_index, bounties_index};
 
-
+        printf("%d %d ", goals_index, failures_index);
         //alokovani mista pro cisla stavu jednotlivych cilu, pasti....
         goals = malloc(goals_index * sizeof(int));
         failures = malloc(failures_index * sizeof(int));
-        traps = malloc(traps_index * sizeof(int));
-        bounties = malloc(bounties_index * sizeof(int));
+
+        if (goals == NULL || failures == NULL) {
+            printf("chyba v alokaci\n");
+            exit(0);
+        }
 
         goals_index = failures_index = traps_index = bounties_index = 0;
         state_count = 0;
+
+        //ZBYTECNE DELAT AZ TADY?
 
         //nahrazeni specialnich stavu v matici
         for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
@@ -1489,8 +1303,13 @@ int main(int argc, char **argv) {
 
         mergeAndSortArrays(mergedArray, goals, failures, traps, bounties, sizes);
 
+        
 
-        fprintf(file_absorbing,"start exclude: ");
+
+
+
+
+        /*fprintf(file_absorbing,"start exclude: ");
         //fflush(NULL);
         int marked_spot_index = 0;
         for (int i = 0; i < AVAILABLE_STATES_COUNT; i++) {
@@ -1499,81 +1318,24 @@ int main(int argc, char **argv) {
                 fprintf(file_absorbing,"%d ", i);
             }
             
-        }     
+        }*/ 
 
-        fprintf(file_absorbing,"\n");
-        //fflush(NULL);
+        //printění iniciálního stavu, z definice bludiště, přidat na stránku zadávání startovního stavu
 
-        if (north) {
-            fprintf(file_absorbing,"T: n\n");
-            //fflush(NULL);
-            action_north(matrix);
-            fprintf(file_absorbing,"\n\n");
-            //fflush(NULL);
+
+        //printění přechodů pro stavy
+
+        for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+            for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
+                fprintf(file_absorbing, "state %d ", matrix[i][j]);
+                fprintf(file_absorbing, "{%d} [0]", observations(matrix, i, j)); 
+            }
         }
-        
-        if (south) {
-            fprintf(file_absorbing,"T: s\n");
-            //fflush(NULL);
-            action_south(matrix);
-            fprintf(file_absorbing,"\n\n");
-            //fflush(NULL); 
-        }    
-
-        if (east) {
-            fprintf(file_absorbing,"T: e\n");
-            //fflush(NULL);
-            action_east(matrix);
-            fprintf(file_absorbing,"\n\n");
-            //fflush(NULL);
-        }
-
-        if (west) {
-            fprintf(file_absorbing,"T: w\n");
-            //fflush(NULL);
-            action_west(matrix);
-            fprintf(file_absorbing,"\n\n");
-            //fflush(NULL);
-        }
-
-        if (northwest) {
-            fprintf(file_absorbing,"T: nw\n");
-            //fflush(NULL);
-            action_northwest(matrix);
-            fprintf(file_absorbing,"\n\n");
-            //fflush(NULL);
-        }
-
-        if (northeast) {
-            fprintf(file_absorbing,"T: ns\n");
-            //fflush(NULL);
-            action_northeast(matrix);
-            fprintf(file_absorbing,"\n\n");
-            //fflush(NULL);
-        }
-
-        if (southwest) {
-            fprintf(file_absorbing,"T: sw\n");
-            //fflush(NULL);
-            action_southwest(matrix);
-            fprintf(file_absorbing,"\n\n");
-            //fflush(NULL);
-        }
-
-        if (southeast) {
-            fprintf(file_absorbing,"T: se\n");
-            //fflush(NULL);
-            action_southeast(matrix);
-            fprintf(file_absorbing,"\n\n");
-            //fflush(NULL);
-        }
-
-        
 
         generate_exceptions(matrix);
 
 
-        observations(matrix);
+        //observations(matrix);
         fprintf(file_absorbing,"\n\n");
 
         rewards(matrix);
