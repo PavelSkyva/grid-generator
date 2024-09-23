@@ -28,9 +28,11 @@
 #define FAILURE -3
 #define TRAP -4
 #define BOUNTY -5
+#define START -6
 
 #define BAD 16
 #define GOOD 17
+#define START_OBS 18
 
 
 typedef struct {

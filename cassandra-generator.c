@@ -35,10 +35,12 @@ int *goals;
 int *failures;
 int *traps;
 int *bounties;
+int *starts;
 int goals_index = 0;
 int failures_index = 0;
 int traps_index = 0;
 int bounties_index = 0;
+int starts_index = 0;
 double random_number;
 //retezec pro uchovani jmena souboru z cmd
 char *input_matrix_file_string;
@@ -212,7 +214,32 @@ void mergeAndSortArrays(int mergedArray[], int goals[], int failures[], int trap
     free(tempArray);
 }
 
-void cassandra_header() {
+int choices(int matrix[][TOTAL_SIZE_COLS]) {
+    int nr_of_choices = 0;
+
+    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
+        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
+            if (matrix[i][j] == OBSTACLE) {
+                continue;
+            }
+            if (matrix[i+1][j] != OBSTACLE) {
+                nr_of_choices++;
+            }
+            if (matrix[i-1][j] != OBSTACLE) {
+                nr_of_choices++;
+            }
+            if (matrix[i][j-1] != OBSTACLE) {
+                nr_of_choices++;
+            }
+            if (matrix[i][j+1] != OBSTACLE) {
+                nr_of_choices++;
+            }
+        }
+    }
+    return nr_of_choices;
+}
+
+void cassandra_header(int matrix[][TOTAL_SIZE_COLS]) {
 
     fprintf(file_absorbing, "@type: POMDP\n");
 
@@ -223,9 +250,10 @@ void cassandra_header() {
     //muze byt vic rewardu, takze sem pridavat
     fprintf(file_absorbing, "reward\n");
 
-    fprintf(file_absorbing, "@nr_states\n%d\n", AVAILABLE_STATES_COUNT);
+    // +2, kvuli inicialnimu stavu a discount sinku
+    fprintf(file_absorbing, "@nr_states\n%d\n", AVAILABLE_STATES_COUNT + 2);
 
-    fprintf(file_absorbing, "@nr_choices\n DOMYSLET POTOM");
+    fprintf(file_absorbing, "@nr_choices\n %d\n", choices(matrix));
 
     fprintf(file_absorbing, "@model\n");
 
@@ -322,7 +350,7 @@ void action_north_slip(int matrix[][TOTAL_SIZE_COLS]) {
     }
 }
 
-void action_north(int matrix[][TOTAL_SIZE_COLS]) {
+void action_north(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
 
     if (impassable) {
         action_north_impass(matrix);
@@ -332,33 +360,14 @@ void action_north(int matrix[][TOTAL_SIZE_COLS]) {
         return;
     }
     
-
+    fprintf(file_absorbing, "\taction n [%lf]\n", step_reward);
     
-    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
-                if (matrix[i][j] != OBSTACLE) {
-                    if (matrix[i-1][j] == OBSTACLE) {
-                        if (k == matrix[i][j]) {
-                            fprintf(file_absorbing,"1.0 ");
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                        }
-                    } else {
-                        if (k == matrix[i-1][j]) {
-                            fprintf(file_absorbing,"1.0 ");
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                        }
-                    }
-                    
-                } else if (matrix[i][j] == OBSTACLE) {
-                    break;
-                }
-            }
-            if (matrix[i][j] != OBSTACLE) 
-                fprintf(file_absorbing,"\n"); 
-        }
+    if (matrix[i-1][j] == OBSTACLE) {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i-1][j], discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
     }
     
 }
@@ -449,7 +458,7 @@ void action_south_slip(int matrix[][TOTAL_SIZE_COLS]) {
 }
 
 
-void action_south(int matrix[][TOTAL_SIZE_COLS]) {
+void action_south(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
 
     if (impassable) {
         action_south_impass(matrix);
@@ -459,38 +468,14 @@ void action_south(int matrix[][TOTAL_SIZE_COLS]) {
         return;
     }
 
-    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
-                if (matrix[i][j] != OBSTACLE) {
-                    if (matrix[i+1][j] == OBSTACLE) {
-                        if (k == matrix[i][j]) {
-                            fprintf(file_absorbing,"1.0 ");
-                            //fflush(NULL);
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                            //fflush(NULL);
-                        }
-                    } else {
-                        if (k == matrix[i+1][j]) {
-                            fprintf(file_absorbing,"1.0 ");
-                            //fflush(NULL);
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                            //fflush(NULL);
-                        }
-                    }
-                    
-                } else if (matrix[i][j] == OBSTACLE) {
-                    break;
-                }
-            }
-            if (matrix[i][j] != OBSTACLE) {
-                fprintf(file_absorbing,"\n"); 
-                //fflush(NULL);
-            }
-                
-        }
+    fprintf(file_absorbing, "\taction s [%lf]\n", step_reward);
+    
+    if (matrix[i+1][j] == OBSTACLE) {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i+1][j], discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
     }
 }
 
@@ -579,7 +564,7 @@ void action_east_slip(int matrix[][TOTAL_SIZE_COLS]) {
     }
 }
 
-void action_east(int matrix[][TOTAL_SIZE_COLS]) {
+void action_east(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
 
     if (impassable) {
         action_east_impass(matrix);
@@ -589,39 +574,14 @@ void action_east(int matrix[][TOTAL_SIZE_COLS]) {
         return;
     }
 
-    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
-                if (matrix[i][j] != OBSTACLE) {
-                    if (matrix[i][j+1] == OBSTACLE) {
-                        if (k == matrix[i][j]) {
-                            fprintf(file_absorbing,"1.0 ");
-                            //fflush(NULL);
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                            //fflush(NULL);
-                        }
-                    } else {
-                        if (k == matrix[i][j+1]) {
-                            fprintf(file_absorbing,"1.0 ");
-                            //fflush(NULL);
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                            //fflush(NULL);
-                        }
-                    }
-                    
-                } else if (matrix[i][j] == OBSTACLE) {
-                    break;
-                }
-            }
-            //aby nebyly mezi transition maticema mezery
-            if (matrix[i][j] != OBSTACLE) {
-                fprintf(file_absorbing,"\n");
-                //fflush(NULL);
-            }
-                
-        }
+    fprintf(file_absorbing, "\taction e [%lf]\n", step_reward);
+    
+    if (matrix[i][j+1] == OBSTACLE) {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j+1], discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
     }
 }
 
@@ -710,7 +670,7 @@ void action_west_slip(int matrix[][TOTAL_SIZE_COLS]) {
     }
 }
 
-void action_west(int matrix[][TOTAL_SIZE_COLS]) {
+void action_west(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
 
     if (impassable) {
         action_west_impass(matrix);
@@ -720,40 +680,14 @@ void action_west(int matrix[][TOTAL_SIZE_COLS]) {
         return;
     }
 
-    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
-                if (matrix[i][j] != OBSTACLE) {
-                    if (matrix[i][j-1] == OBSTACLE) {
-                        if (k == matrix[i][j]) {
-                            fprintf(file_absorbing,"1.0 ");
-                            //fflush(NULL);
-
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                            //fflush(NULL);
-                        }
-                    } else {
-                        if (k == matrix[i][j-1]) {
-                            fprintf(file_absorbing,"1.0 ");
-                            //fflush(NULL);
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                            //fflush(NULL);
-                        }
-                    }
-                    
-                } else if (matrix[i][j] == OBSTACLE) {
-                    break;
-                }
-            }
-            //aby nebyly mezi transition maticema mezery
-            if (matrix[i][j] != OBSTACLE) {
-                fprintf(file_absorbing,"\n"); 
-                //fflush(NULL);
-            }
-                
-        }
+    fprintf(file_absorbing, "\taction w [%lf]\n", step_reward);
+    
+    if (matrix[i][j-1] == OBSTACLE) {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j-1], discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
     }
 }
 
@@ -955,13 +889,15 @@ void action_southwest(int matrix[][TOTAL_SIZE_COLS]) {
 
 int observations(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
 
-    for (int k = 0; i < goals_index; k++) {
+    //printf("nr_of_g:%d\n", goals_index);
+
+    for (int k = 0; k < goals_index; k++) {
         if (matrix[i][j] == goals[k]) {
             return GOOD;
         }
     }
 
-    for (int k = 0; i < failures_index; k++) {
+    for (int k = 0; k < failures_index; k++) {
         if (matrix[i][j] == failures[k]) {
             return BAD;
         }
@@ -992,105 +928,21 @@ int observations(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
 
 }
 
-void rewards(int matrix[][TOTAL_SIZE_COLS]) {
-    goals_index = failures_index = traps_index = bounties_index = 0;
 
-    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            if (matrix[i][j] == OBSTACLE) {
-                continue;
-            } else if (matrix[i][j] == goals[goals_index]) {
-                fprintf(file_absorbing,"R: * : %d : * : *  %3f\n", matrix[i][j], goal_reward);
-                //fflush(NULL);
-                goals_index++;
-            } else if (matrix[i][j] == failures[failures_index]) {
-                fprintf(file_absorbing,"R: * : %d : * : *  %3f\n", matrix[i][j], failure_reward);
-                //fflush(NULL);
-                failures_index++;
-            } else if(matrix[i][j] == traps[traps_index]) {
-                fprintf(file_absorbing,"R: * : %d : * : *  %3f\n", matrix[i][j], trap_reward); 
-                //fflush(NULL);
-                traps_index++;
-            } else if (matrix[i][j] == bounties[bounties_index]) {
-                fprintf(file_absorbing,"R: * : %d : * : *  %3f\n", matrix[i][j], bounty_reward);
-                //fflush(NULL);
-                bounties_index++;
-            } else {
-                fprintf(file_absorbing,"R: * : %d : * : *  %3f\n", matrix[i][j], step_reward);
-                //fflush(NULL);
-            }
-        }
-    }
-}
-
-void generate_exceptions(int matrix[][TOTAL_SIZE_COLS]) {
-    goals_index = failures_index = 0;
-    
-    fprintf(file_absorbing,"\n");
-    //fflush(NULL);
-    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            
-            if (matrix[i][j] == goals[goals_index]) {
-
-                fprintf(file_absorbing,"T: * : %d\n", matrix[i][j]);
-                //fflush(NULL);
-                for (int k = 0; k < AVAILABLE_STATES_COUNT; k++) {
-                    if (k == matrix[i][j]) {
-                        fprintf(file_absorbing,"1.0 ");
-                        //fflush(NULL);
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                        //fflush(NULL);
-                    }
-                }
-                
-                fprintf(file_absorbing,"\n\n");
-                //fflush(NULL);
-                goals_index++;
-            } else if (matrix[i][j] == failures[failures_index]) {
-                fprintf(file_absorbing,"T: * : %d\n", matrix[i][j]);
-                //fflush(NULL);
-                
-                for (int k = 0; k < AVAILABLE_STATES_COUNT; k++) {
-                    if (k == matrix[i][j]) {
-                        fprintf(file_absorbing,"1.0 ");
-                        //fflush(NULL);
-                    } else {
-                        fprintf(file_absorbing,"0.0 ");
-                        //fflush(NULL);
-                    }
-                }
-                
-                fprintf(file_absorbing,"\n\n");
-                //fflush(NULL);
-                failures_index++;
-            }
-        }
+void init_state() {
+    fprintf(file_absorbing, "state %d {%d} [0] init\n", AVAILABLE_STATES_COUNT, START_OBS);
+    fprintf(file_absorbing, "\taction init [0]\n");
+    for (int i = 0; i < starts_index; i++ ) {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", starts[i], 1.0 / starts_index);
     }
 }
 
 
-/*
-long getFileSize(FILE *file) {
-    long size;
-
-    long currentPosition = ftell(file);
-
-    fseek(file, 0, SEEK_END);
-
-    size = ftell(file);
-
-    fseek(file, currentPosition, SEEK_SET);
-
-    return size;
-}
-
-
-void matrix_print(int rows, int cols) {
-
-}
-*/
+void discount_sink() {
+    fprintf(file_absorbing, "state %d {observation_discount_sinku} [0] discount_sink\n", AVAILABLE_STATES_COUNT + 1);
+    fprintf(file_absorbing, "\taction discount_sink [0]\n");
+    fprintf(file_absorbing, "\t\t%d : 1\n", AVAILABLE_STATES_COUNT + 1);
+} 
 
 
 int main(int argc, char **argv) {
@@ -1182,6 +1034,7 @@ int main(int argc, char **argv) {
 
         fseek(input_matrix_file, 0, SEEK_SET);
 
+
         //pridat kontroly symbolu (validni jsou zatim #,  , F, G, T, B)
         for (int i = 0 ; i < TOTAL_SIZE_ROWS; i++) {
             for (int j = 0 ; j < TOTAL_SIZE_COLS ; j++) {
@@ -1213,6 +1066,9 @@ int main(int argc, char **argv) {
                     } else if (matrix[i][j] == 'B') {
                         matrix[i][j] = BOUNTY;
                         bounties_index++;
+                    } else if (matrix[i][j] == 'S') {
+                        matrix[i][j] = START;
+                        starts_index++;
                     } else {
                         matrix[i][j] = state_count;
                     }
@@ -1221,24 +1077,23 @@ int main(int argc, char **argv) {
                 
             }
         }
-        //indexy nam zde znaci pocet polozek v danem poli, tedy pocet cilu, pasti...
-        // promenna pro pocty jednotlivych specialnich stavu, pouzito ve fci mergeAndSortArrays
-        int sizes[] = {goals_index, failures_index, traps_index, bounties_index};
 
-        printf("%d %d ", goals_index, failures_index);
+        //indexy nam zde znaci pocet polozek v danem poli, tedy pocet cilu, pasti...
+
         //alokovani mista pro cisla stavu jednotlivych cilu, pasti....
         goals = malloc(goals_index * sizeof(int));
         failures = malloc(failures_index * sizeof(int));
+        traps = malloc(traps_index * sizeof(int));
+        bounties = malloc(bounties_index * sizeof(int));
+        starts = malloc(starts_index * sizeof(int));
 
-        if (goals == NULL || failures == NULL) {
+        if (goals == NULL || failures == NULL || bounties == NULL || traps == NULL || starts == NULL) {
             printf("chyba v alokaci\n");
             exit(0);
         }
 
-        goals_index = failures_index = traps_index = bounties_index = 0;
+        goals_index = failures_index = traps_index = bounties_index = starts_index = 0;
         state_count = 0;
-
-        //ZBYTECNE DELAT AZ TADY?
 
         //nahrazeni specialnich stavu v matici
         for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
@@ -1265,12 +1120,16 @@ int main(int argc, char **argv) {
                     //fprintf(stderr, "bounty: %d---", bounties[bounties_index]);
                     bounties_index++;
                     matrix[i][j] = state_count++;
+                } else if (matrix[i][j] == START) {
+                    starts[starts_index] = state_count;
+                    starts_index++;
+                    matrix[i][j] = state_count++;
                 } else {
                     state_count++;
                 }
             }
         }
-
+        
         fprintf(input_matrix_file, "\n");
         
         //printeni matice do souboru in<cislo>.pomdp
@@ -1293,53 +1152,45 @@ int main(int argc, char **argv) {
             return 1;
         } 
 
-        cassandra_header();
-            
+        cassandra_header(matrix);
 
-        int size = sizes[0] + sizes[1] + sizes[2] + sizes[3];
-        int mergedArray[size];
+        init_state();
 
-            
-
-        mergeAndSortArrays(mergedArray, goals, failures, traps, bounties, sizes);
-
-        
-
-
-
-
-
-        /*fprintf(file_absorbing,"start exclude: ");
-        //fflush(NULL);
-        int marked_spot_index = 0;
-        for (int i = 0; i < AVAILABLE_STATES_COUNT; i++) {
-            if (i == mergedArray[marked_spot_index]) {
-                marked_spot_index++;
-                fprintf(file_absorbing,"%d ", i);
-            }
-            
-        }*/ 
-
-        //printění iniciálního stavu, z definice bludiště, přidat na stránku zadávání startovního stavu
-
-
-        //printění přechodů pro stavy
-
+        int observation_number;
+        //vypisovani jednotlivych stavu + jejich akci
         for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
             for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
+                if (matrix[i][j] == OBSTACLE) {
+                    continue;
+                }
                 fprintf(file_absorbing, "state %d ", matrix[i][j]);
-                fprintf(file_absorbing, "{%d} [0]", observations(matrix, i, j)); 
+                observation_number = observations(matrix, i, j);
+                if (observation_number == BAD) {
+                    fprintf(file_absorbing, "{%d} [0] fail\n", observation_number);
+                } else if (observation_number == GOOD) {
+                    fprintf(file_absorbing, "{%d} [0] goal\n", observation_number);
+                } else {
+                    fprintf(file_absorbing, "{%d} [0]\n", observation_number);
+                }
+                
+                if (north) {
+                    action_north(matrix, i, j);
+                }
+                if (south) {
+                    action_south(matrix, i, j);
+                }
+                if (east) {
+                    action_east(matrix, i, j);
+                }
+                if (west) {
+                    action_west(matrix, i, j);
+                }
             }
         }
 
-        generate_exceptions(matrix);
+        discount_sink();
 
-
-        //observations(matrix);
-        fprintf(file_absorbing,"\n\n");
-
-        rewards(matrix);
-
+        
 
 
         free(goals);
