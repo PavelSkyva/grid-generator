@@ -13,6 +13,6 @@ all: $(SRC)
 
 clean: #smaz vsechny object files a binarky 
 		$(RM) $(SRC) $(EX)
-		find . -type f -name '*.pomdp' -exec $(RM) {} +
+		find . -type f -name '*.drn' -exec $(RM) {} +
 		find . -type f -name '*.txt' -exec $(RM) {} +
 		find . -type d -empty -delete

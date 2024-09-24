@@ -71,8 +71,8 @@ int repeat_count;
 double step_reward = -0.04;
 double bounty_reward = 10;
 double trap_reward = -10;
-double goal_reward = 1.0;
-double failure_reward = -1.0;
+double goal_reward = 10.0;
+double failure_reward = -10.0;
 float discount = 0.95;
 const char *observations_array[] = {"none", "L", "R", "U", "D", "L-R", "L-U", "L-D", "R-U", "R-D", "U-D", "L-R-U", "L-R-D", "L-U-D", "R-U-D", "all", "bad", "good"};
 int observation_count = sizeof(observations_array) / sizeof(observations_array[0]);
@@ -214,32 +214,27 @@ void mergeAndSortArrays(int mergedArray[], int goals[], int failures[], int trap
     free(tempArray);
 }
 
-int choices(int matrix[][TOTAL_SIZE_COLS]) {
+int choices() {
     int nr_of_choices = 0;
 
-    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            if (matrix[i][j] == OBSTACLE) {
-                continue;
-            }
-            if (matrix[i+1][j] != OBSTACLE) {
-                nr_of_choices++;
-            }
-            if (matrix[i-1][j] != OBSTACLE) {
-                nr_of_choices++;
-            }
-            if (matrix[i][j-1] != OBSTACLE) {
-                nr_of_choices++;
-            }
-            if (matrix[i][j+1] != OBSTACLE) {
-                nr_of_choices++;
-            }
-        }
+    if (north) {
+        nr_of_choices++;
     }
+    if (south) {
+        nr_of_choices++;
+    }
+    if (east) {
+        nr_of_choices++;
+    }
+    if (west) {
+        nr_of_choices++;
+    }
+
+
     return nr_of_choices;
 }
 
-void cassandra_header(int matrix[][TOTAL_SIZE_COLS]) {
+void cassandra_header() {
 
     fprintf(file_absorbing, "@type: POMDP\n");
 
@@ -253,7 +248,8 @@ void cassandra_header(int matrix[][TOTAL_SIZE_COLS]) {
     // +2, kvuli inicialnimu stavu a discount sinku
     fprintf(file_absorbing, "@nr_states\n%d\n", AVAILABLE_STATES_COUNT + 2);
 
-    fprintf(file_absorbing, "@nr_choices\n %d\n", choices(matrix));
+    // +2, init akce a discount akce
+    fprintf(file_absorbing, "@nr_choices\n%d\n", choices() * AVAILABLE_STATES_COUNT + 2);
 
     fprintf(file_absorbing, "@model\n");
 
@@ -364,10 +360,10 @@ void action_north(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
     
     if (matrix[i-1][j] == OBSTACLE) {
         fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
     } else {
         fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i-1][j], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
     }
     
 }
@@ -472,10 +468,10 @@ void action_south(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
     
     if (matrix[i+1][j] == OBSTACLE) {
         fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
     } else {
         fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i+1][j], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
     }
 }
 
@@ -578,10 +574,10 @@ void action_east(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
     
     if (matrix[i][j+1] == OBSTACLE) {
         fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
     } else {
         fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j+1], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
     }
 }
 
@@ -684,10 +680,10 @@ void action_west(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
     
     if (matrix[i][j-1] == OBSTACLE) {
         fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
     } else {
         fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j-1], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 2, 1.0 - discount);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
     }
 }
 
@@ -908,19 +904,20 @@ int observations(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
     int obstacles = 0;
 
     //nalevo
-    if (matrix[i-1][j] == OBSTACLE) {
+    if (matrix[i][j-1] == OBSTACLE) {
         obstacles += 8;
     }
     //napravo
-    if (matrix[i+1][j] == OBSTACLE) {
+    if (matrix[i][j+1] == OBSTACLE) {
+        printf("state:%d\n", matrix[i][j]);
         obstacles += 4;
     }
     //nahore
-    if (matrix[i][j-1] == OBSTACLE) {
+    if (matrix[i-1][j] == OBSTACLE) {
         obstacles += 2;
     }
     //dole
-    if (matrix[i][j+1] == OBSTACLE) {
+    if (matrix[i+1][j] == OBSTACLE) {
         obstacles += 1;
     }
 
@@ -930,7 +927,7 @@ int observations(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
 
 
 void init_state() {
-    fprintf(file_absorbing, "state %d {%d} [0] init\n", AVAILABLE_STATES_COUNT, START_OBS);
+    fprintf(file_absorbing, "state 0 {%d} [0] init\n", START_OBS);
     fprintf(file_absorbing, "\taction init [0]\n");
     for (int i = 0; i < starts_index; i++ ) {
         fprintf(file_absorbing, "\t\t%d : %lf\n", starts[i], 1.0 / starts_index);
@@ -939,7 +936,7 @@ void init_state() {
 
 
 void discount_sink() {
-    fprintf(file_absorbing, "state %d {observation_discount_sinku} [0] discount_sink\n", AVAILABLE_STATES_COUNT + 1);
+    fprintf(file_absorbing, "state %d {%d} [0] discount_sink\n", AVAILABLE_STATES_COUNT + 1, START_OBS + 1);
     fprintf(file_absorbing, "\taction discount_sink [0]\n");
     fprintf(file_absorbing, "\t\t%d : 1\n", AVAILABLE_STATES_COUNT + 1);
 } 
@@ -1018,7 +1015,7 @@ int main(int argc, char **argv) {
         }
 
         
-        sprintf(abs_file_number, "absorbing.pomdp");
+        sprintf(abs_file_number, "output.drn");
     
         FILE *input_matrix_file = fopen(input_matrix_file_string, "r+");
         
@@ -1130,7 +1127,7 @@ int main(int argc, char **argv) {
             }
         }
         
-        fprintf(input_matrix_file, "\n");
+        fprintf(input_matrix_file, "\n\n");
         
         //printeni matice do souboru in<cislo>.pomdp
         for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
@@ -1152,7 +1149,7 @@ int main(int argc, char **argv) {
             return 1;
         } 
 
-        cassandra_header(matrix);
+        cassandra_header();
 
         init_state();
 
@@ -1163,7 +1160,7 @@ int main(int argc, char **argv) {
                 if (matrix[i][j] == OBSTACLE) {
                     continue;
                 }
-                fprintf(file_absorbing, "state %d ", matrix[i][j]);
+                fprintf(file_absorbing, "state %d ", matrix[i][j] + 1);
                 observation_number = observations(matrix, i, j);
                 if (observation_number == BAD) {
                     fprintf(file_absorbing, "{%d} [0] fail\n", observation_number);
@@ -1188,6 +1185,7 @@ int main(int argc, char **argv) {
             }
         }
 
+        
         discount_sink();
 
         
