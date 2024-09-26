@@ -234,7 +234,7 @@ int choices() {
     return nr_of_choices;
 }
 
-void cassandra_header() {
+void drn_header() {
 
     fprintf(file_absorbing, "@type: POMDP\n");
 
@@ -246,10 +246,10 @@ void cassandra_header() {
     fprintf(file_absorbing, "reward\n");
 
     // +2, kvuli inicialnimu stavu a discount sinku
-    fprintf(file_absorbing, "@nr_states\n%d\n", AVAILABLE_STATES_COUNT + 2);
+    fprintf(file_absorbing, "@nr_states\n%d\n", AVAILABLE_STATES_COUNT + 1);
 
     // +2, init akce a discount akce
-    fprintf(file_absorbing, "@nr_choices\n%d\n", choices() * AVAILABLE_STATES_COUNT + 2);
+    fprintf(file_absorbing, "@nr_choices\n%d\n", choices() * AVAILABLE_STATES_COUNT + starts_index);
 
     fprintf(file_absorbing, "@model\n");
 
@@ -292,78 +292,46 @@ void action_north_impass(int matrix[][TOTAL_SIZE_COLS]) {
     }
 }
 
-void action_north_slip(int matrix[][TOTAL_SIZE_COLS]) {
-    //pro vyrovavani, pokud na strane, kam agent uklouzl, je prekazka
-    double slip_help = 0.0;
-    // booly, aby se zabranilo tisknuti pri prekazkach
-    bool do_not_print_l = false;
-    bool do_not_print_r = false;
+void action_north_slip(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
+    fprintf(file_absorbing, "\taction n [%lf]\n", step_reward);
 
-    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            //zjisteni zda do na potencialne uklouznutelne strany jsou prekazky
-            if (matrix[i][j+1] == OBSTACLE) {
-                slip_help += (slip_prob / 2);
-                do_not_print_r = true;
-            }
-            if (matrix[i][j-1] == OBSTACLE) {
-                slip_help += (slip_prob / 2);
-                do_not_print_l = true;
-            }
-            //<POCET_DOSTUPNYCH_STAVU> x tisknuti 
-            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
-                // pokud je prekazka => preskoc
-                if (matrix[i][j] != OBSTACLE) {
-                    // north -- pokud je nad stavem prekazka, zustan v nem, ale mohl uklouznout 
-                    if (matrix[i-1][j] == OBSTACLE) {
-                        if ((k == matrix[i][j+1] && !do_not_print_r) || (k == matrix[i][j-1] && !do_not_print_l)) {
-                            fprintf(file_absorbing,"%f ", slip_prob / 2);
-                        } else if (k == matrix[i][j]) {
-                            fprintf(file_absorbing,"%f ", 1.0 - slip_prob + slip_help);
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                        }
-                    } else {
-                        if (k == matrix[i-1][j]) {
-                            fprintf(file_absorbing,"%f ", 1.0 - slip_prob + slip_help);
-                        } else if ((k == matrix[i][j+1] && !do_not_print_r) || (k == matrix[i][j-1] && !do_not_print_l)) {
-                            fprintf(file_absorbing,"%f ", slip_prob / 2);
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                        }
-                    }
-                    
-                } else if (matrix[i][j] == OBSTACLE) {
-                    break;
-                }
-            }
-            if (matrix[i][j] != OBSTACLE) 
-                fprintf(file_absorbing,"\n");
-            slip_help = 0.0;
-            do_not_print_l = false;
-            do_not_print_r = false;
-        }
+    float impossible_slip = 0.0;
+
+    if (matrix[i][j-1] == OBSTACLE) {
+        impossible_slip += slip_prob / 2;
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j-1], slip_prob / 2);
+    }
+
+    if (matrix[i][j+1] == OBSTACLE) {
+        impossible_slip += slip_prob / 2;
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j+1], slip_prob / 2);
+    }
+
+    if (matrix[i-1][j] == OBSTACLE) {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], 1.0 - slip_prob + impossible_slip);
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i-i][j], 1.0 - slip_prob + impossible_slip);
     }
 }
 
-void action_north(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
+void action_north(int matrix[][TOTAL_SIZE_COLS], int i, int j, int observation_number) {
 
-    if (impassable) {
+    if (impassable && !(observation_number == BAD || observation_number == GOOD)) {
         action_north_impass(matrix);
         return;
-    } else if (slippery) {
-        action_north_slip(matrix);
+    } else if (slippery && !(observation_number == BAD || observation_number == GOOD)) {
+        action_north_slip(matrix, i, j);
         return;
     }
     
     fprintf(file_absorbing, "\taction n [%lf]\n", step_reward);
     
-    if (matrix[i-1][j] == OBSTACLE) {
-        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
+    if (observation_number == BAD || observation_number == GOOD || matrix[i-1][j] == OBSTACLE) {
+        fprintf(file_absorbing, "\t\t%d : 1.0\n", matrix[i][j]);
     } else {
-        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i-1][j], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
+        fprintf(file_absorbing, "\t\t%d : 1.0\n", matrix[i-1][j]);
     }
     
 }
@@ -399,79 +367,47 @@ void action_south_impass(int matrix[][TOTAL_SIZE_COLS]) {
     }
 }
 
-void action_south_slip(int matrix[][TOTAL_SIZE_COLS]) {
-    //pro vyrovavani, pokud na strane, kam agent uklouzl, je prekazka
-    double slip_help = 0.0;
-    //booly, aby se zabranilo tisknuti pri prekazkach
-    bool do_not_print_l = false;
-    bool do_not_print_r = false;
+void action_south_slip(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
+    fprintf(file_absorbing, "\taction s [%lf]\n", step_reward);
 
-    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            //zjisteni zda do na potencialne uklouznutelne strany jsou prekazky
-            if (matrix[i][j-1] == OBSTACLE) {
-                slip_help += (slip_prob / 2);
-                do_not_print_r = true;
-            }
-            if (matrix[i][j+1] == OBSTACLE) {
-                slip_help += (slip_prob / 2);
-                do_not_print_l = true;
-            }
-            //<POCET_DOSTUPNYCH_STAVU> x tisknuti 
-            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
-                // pokud je prekazka => preskoc
-                if (matrix[i][j] != OBSTACLE) {
-                    // south -- pokud pod stavem prekazka, zustan v nem, ale mohl uklouznout 
-                    if (matrix[i+1][j] == OBSTACLE) {
-                        if ((k == matrix[i][j-1] && !do_not_print_r) || (k == matrix[i][j+1] && !do_not_print_l)) {
-                            fprintf(file_absorbing,"%f ", slip_prob / 2);
-                        } else if (k == matrix[i][j]) {
-                            fprintf(file_absorbing,"%f ", 1.0 - slip_prob + slip_help);
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                        }
-                    } else {
-                        if (k == matrix[i+1][j]) {
-                            fprintf(file_absorbing,"%f ", 1.0 - slip_prob + slip_help);
-                        } else if ((k == matrix[i][j-1] && !do_not_print_r) || (k == matrix[i][j+1] && !do_not_print_l)) {
-                            fprintf(file_absorbing,"%f ", slip_prob / 2);
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                        }
-                    }
-                    
-                } else if (matrix[i][j] == OBSTACLE) {
-                    break;
-                }
-            }
-            if (matrix[i][j] != OBSTACLE) 
-                fprintf(file_absorbing,"\n");
-            slip_help = 0.0;
-            do_not_print_l = false;
-            do_not_print_r = false;
-        }
+    float impossible_slip = 0.0;
+
+    if (matrix[i][j-1] == OBSTACLE) {
+        impossible_slip += slip_prob / 2;
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j-1], slip_prob / 2);
+    }
+
+    if (matrix[i][j+1] == OBSTACLE) {
+        impossible_slip += slip_prob / 2;
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j+1], slip_prob / 2);
+    }
+
+    if (matrix[i+1][j] == OBSTACLE) {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], 1.0 - slip_prob + impossible_slip);
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i+i][j], 1.0 - slip_prob + impossible_slip);
     }
 }
 
 
-void action_south(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
+void action_south(int matrix[][TOTAL_SIZE_COLS], int i, int j, int observation_number) {
 
     if (impassable) {
         action_south_impass(matrix);
         return;
-    } else if (slippery) {
-        action_south_slip(matrix);
+    } else if (slippery && !(observation_number == BAD || observation_number == GOOD)) {
+        action_south_slip(matrix, i, j);
         return;
     }
 
     fprintf(file_absorbing, "\taction s [%lf]\n", step_reward);
     
-    if (matrix[i+1][j] == OBSTACLE) {
-        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
+    if (observation_number == BAD || observation_number == GOOD || matrix[i+1][j] == OBSTACLE) {
+        fprintf(file_absorbing, "\t\t%d : 1.0\n", matrix[i][j]);
     } else {
-        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i+1][j], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
+        fprintf(file_absorbing, "\t\t%d : 1.0\n", matrix[i+1][j]);
     }
 }
 
@@ -506,78 +442,46 @@ void action_east_impass(int matrix[][TOTAL_SIZE_COLS]) {
     }
 }
 
-void action_east_slip(int matrix[][TOTAL_SIZE_COLS]) {
-    //pro vyrovavani, pokud na strane, kam agent uklouzl, je prekazka
-    double slip_help = 0.0;
-    // booly, aby se zabranilo tisknuti pri prekazkach
-    bool do_not_print_l = false;
-    bool do_not_print_r = false;
+void action_east_slip(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
+    fprintf(file_absorbing, "\taction e [%lf]\n", step_reward);
 
-    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            //zjisteni zda do na potencialne uklouznutelne strany jsou prekazky
-            if (matrix[i+1][j] == OBSTACLE) {
-                slip_help += (slip_prob / 2);
-                do_not_print_r = true;
-            }
-            if (matrix[i-1][j] == OBSTACLE) {
-                slip_help += (slip_prob / 2);
-                do_not_print_l = true;
-            }
-            //<POCET_DOSTUPNYCH_STAVU> x tisknuti 
-            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
-                // pokud je prekazka => preskoc
-                if (matrix[i][j] != OBSTACLE) {
-                    // south -- pokud pod stavem prekazka, zustan v nem, ale mohl uklouznout 
-                    if (matrix[i][j+1] == OBSTACLE) {
-                        if ((k == matrix[i+1][j] && !do_not_print_r) || (k == matrix[i-1][j] && !do_not_print_l)) {
-                            fprintf(file_absorbing,"%f ", slip_prob / 2);
-                        } else if (k == matrix[i][j]) {
-                            fprintf(file_absorbing,"%f ", 1.0 - slip_prob + slip_help);
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                        }
-                    } else {
-                        if (k == matrix[i][j+1]) {
-                            fprintf(file_absorbing,"%f ", 1.0 - slip_prob + slip_help);
-                        } else if ((k == matrix[i+1][j] && !do_not_print_r) || (k == matrix[i-1][j] && !do_not_print_l)) {
-                            fprintf(file_absorbing,"%f ", slip_prob / 2);
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                        }
-                    }
-                    
-                } else if (matrix[i][j] == OBSTACLE) {
-                    break;
-                }
-            }
-            if (matrix[i][j] != OBSTACLE) 
-                fprintf(file_absorbing,"\n");
-            slip_help = 0.0;
-            do_not_print_l = false;
-            do_not_print_r = false;
-        }
+    float impossible_slip = 0.0;
+
+    if (matrix[i-1][j] == OBSTACLE) {
+        impossible_slip += slip_prob / 2;
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i-1][j], slip_prob / 2);
+    }
+
+    if (matrix[i+1][j] == OBSTACLE) {
+        impossible_slip += slip_prob / 2;
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i+1][j], slip_prob / 2);
+    }
+
+    if (matrix[i][j-1] == OBSTACLE) {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], 1.0 - slip_prob + impossible_slip);
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j-1], 1.0 - slip_prob + impossible_slip);
     }
 }
 
-void action_east(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
+void action_east(int matrix[][TOTAL_SIZE_COLS], int i, int j, int observation_number) {
 
     if (impassable) {
         action_east_impass(matrix);
         return;
-    } else if (slippery) {
-        action_east_slip(matrix);
+    } else if (slippery && !(observation_number == BAD || observation_number == GOOD)) {
+        action_east_slip(matrix, i, j);
         return;
     }
 
     fprintf(file_absorbing, "\taction e [%lf]\n", step_reward);
     
-    if (matrix[i][j+1] == OBSTACLE) {
-        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
+    if (observation_number == BAD || observation_number == GOOD || matrix[i][j+1] == OBSTACLE) {
+        fprintf(file_absorbing, "\t\t%d : 1.0\n", matrix[i][j]);
     } else {
-        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j+1], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
+        fprintf(file_absorbing, "\t\t%d : 1.0\n", matrix[i][j+1]);
     }
 }
 
@@ -612,92 +516,51 @@ void action_west_impass(int matrix[][TOTAL_SIZE_COLS]) {
     }
 }
 
-void action_west_slip(int matrix[][TOTAL_SIZE_COLS]) {
-    //pro vyrovavani, pokud na strane, kam agent uklouzl, je prekazka
-    double slip_help = 0.0;
-    // booly, aby se zabranilo tisknuti pri prekazkach
-    bool do_not_print_l = false;
-    bool do_not_print_r = false;
+void action_west_slip(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
+    fprintf(file_absorbing, "\taction w [%lf]\n", step_reward);
 
-    for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
-        for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
-            //zjisteni zda do na potencialne uklouznutelne strany jsou prekazky
-            if (matrix[i-1][j] == OBSTACLE) {
-                slip_help += (slip_prob / 2);
-                do_not_print_r = true;
-            }
-            if (matrix[i+1][j] == OBSTACLE) {
-                slip_help += (slip_prob / 2);
-                do_not_print_l = true;
-            }
-            //<POCET_DOSTUPNYCH_STAVU> x tisknuti 
-            for (int k = 0 ; k < AVAILABLE_STATES_COUNT ; k++) {
-                // pokud je prekazka => preskoc
-                if (matrix[i][j] != OBSTACLE) {
-                    // south -- pokud pod stavem prekazka, zustan v nem, ale mohl uklouznout 
-                    if (matrix[i][j-1] == OBSTACLE) {
-                        if ((k == matrix[i-1][j] && !do_not_print_r) || (k == matrix[i+1][j] && !do_not_print_l)) {
-                            fprintf(file_absorbing,"%f ", slip_prob / 2);
-                        } else if (k == matrix[i][j]) {
-                            fprintf(file_absorbing,"%f ", 1.0 - slip_prob + slip_help);
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                        }
-                    } else {
-                        if (k == matrix[i][j-1]) {
-                            fprintf(file_absorbing,"%f ", 1.0 - slip_prob + slip_help);
-                        } else if ((k == matrix[i-1][j] && !do_not_print_r) || (k == matrix[i+1][j] && !do_not_print_l)) {
-                            fprintf(file_absorbing,"%f ", slip_prob / 2);
-                        } else {
-                            fprintf(file_absorbing,"0.0 ");
-                        }
-                    }
-                    
-                } else if (matrix[i][j] == OBSTACLE) {
-                    break;
-                }
-            }
-            if (matrix[i][j] != OBSTACLE) 
-                fprintf(file_absorbing,"\n");
-            slip_help = 0.0;
-            do_not_print_l = false;
-            do_not_print_r = false;
-        }
+    float impossible_slip = 0.0;
+
+    if (matrix[i-1][j] == OBSTACLE) {
+        impossible_slip += slip_prob / 2;
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i-1][j], slip_prob / 2);
+    }
+
+    if (matrix[i+1][j] == OBSTACLE) {
+        impossible_slip += slip_prob / 2;
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i+1][j], slip_prob / 2);
+    }
+
+    if (matrix[i][j+1] == OBSTACLE) {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], 1.0 - slip_prob + impossible_slip);
+    } else {
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j+1], 1.0 - slip_prob + impossible_slip);
     }
 }
 
-void action_west(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
+void action_west(int matrix[][TOTAL_SIZE_COLS], int i, int j, int observation_number) {
 
     if (impassable) {
         action_west_impass(matrix);
         return;
-    } else if (slippery) {
-        action_west_slip(matrix);
+    } else if (slippery && !(observation_number == BAD || observation_number == GOOD)) {
+        action_west_slip(matrix, i, j);
         return;
     }
 
     fprintf(file_absorbing, "\taction w [%lf]\n", step_reward);
     
-    if (matrix[i][j-1] == OBSTACLE) {
-        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
+    if (observation_number == BAD || observation_number == GOOD || matrix[i][j-1] == OBSTACLE) {
+        fprintf(file_absorbing, "\t\t%d : 1.0\n", matrix[i][j]);
     } else {
-        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j-1], discount);
-        fprintf(file_absorbing, "\t\t%d : %lf\n", AVAILABLE_STATES_COUNT + 1, 1.0 - discount);
+        fprintf(file_absorbing, "\t\t%d : 1.0\n", matrix[i][j-1]);
     }
 }
 
 void action_northwest(int matrix[][TOTAL_SIZE_COLS]) {
 
-    /*
-    if (impassable) {
-        action_west_impass(matrix);
-        return;
-    } else if (slippery) {
-        action_west_slip(matrix);
-        return;
-    }
-    */
 
     for (int i = PADDING_SIZE; i < MATRIX_ROWS + PADDING_SIZE; i++) {
         for (int j = PADDING_SIZE; j < MATRIX_COLS + PADDING_SIZE; j++) {
@@ -909,7 +772,6 @@ int observations(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
     }
     //napravo
     if (matrix[i][j+1] == OBSTACLE) {
-        printf("state:%d\n", matrix[i][j]);
         obstacles += 4;
     }
     //nahore
@@ -934,13 +796,13 @@ void init_state() {
     }
 }
 
-
+/*
 void discount_sink() {
     fprintf(file_absorbing, "state %d {%d} [0] discount_sink\n", AVAILABLE_STATES_COUNT + 1, START_OBS + 1);
     fprintf(file_absorbing, "\taction discount_sink [0]\n");
     fprintf(file_absorbing, "\t\t%d : 1\n", AVAILABLE_STATES_COUNT + 1);
 } 
-
+*/
 
 int main(int argc, char **argv) {
 
@@ -1042,7 +904,7 @@ int main(int argc, char **argv) {
             }
         }
         
-        int state_count = 0;
+        int state_count = 1;
 
         //nahrazeni znaku za cisla stavu (normalnich/specialnich) + napocitani jednotlivych specialnich stavu
         for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
@@ -1090,7 +952,7 @@ int main(int argc, char **argv) {
         }
 
         goals_index = failures_index = traps_index = bounties_index = starts_index = 0;
-        state_count = 0;
+        state_count = 1;
 
         //nahrazeni specialnich stavu v matici
         for (int i = 0; i < TOTAL_SIZE_ROWS; i++) {
@@ -1149,7 +1011,7 @@ int main(int argc, char **argv) {
             return 1;
         } 
 
-        cassandra_header();
+        drn_header();
 
         init_state();
 
@@ -1160,7 +1022,7 @@ int main(int argc, char **argv) {
                 if (matrix[i][j] == OBSTACLE) {
                     continue;
                 }
-                fprintf(file_absorbing, "state %d ", matrix[i][j] + 1);
+                fprintf(file_absorbing, "state %d ", matrix[i][j]);
                 observation_number = observations(matrix, i, j);
                 if (observation_number == BAD) {
                     fprintf(file_absorbing, "{%d} [0] fail\n", observation_number);
@@ -1171,22 +1033,22 @@ int main(int argc, char **argv) {
                 }
                 
                 if (north) {
-                    action_north(matrix, i, j);
+                    action_north(matrix, i, j, observation_number);
                 }
                 if (south) {
-                    action_south(matrix, i, j);
+                    action_south(matrix, i, j, observation_number);
                 }
                 if (east) {
-                    action_east(matrix, i, j);
+                    action_east(matrix, i, j, observation_number);
                 }
                 if (west) {
-                    action_west(matrix, i, j);
+                    action_west(matrix, i, j, observation_number);
                 }
             }
         }
 
         
-        discount_sink();
+        //discount_sink();
 
         
 
