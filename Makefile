@@ -3,7 +3,7 @@ CC=gcc
 CFLAGS= -g -Wall -Wextra -std=c17 -pedantic -lm 
 
 
-EX= drn_generator
+EX= drn-generator
 
 #sem vepsat vzdy kazdy novy soubor (s priponou .o)
 SRC= drn-generator.o grid-generator.o

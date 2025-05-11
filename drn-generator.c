@@ -146,15 +146,11 @@ int args_parse(int argc, char **argv) {
             } else {    
                 actions_parse(argv[i+1]);
             }
-        } else if (strcmp(argv[i], "-discount") == 0) {
-            discount = strtod(argv[i+1], NULL);
-            discount_given = true;
         } else if (strcmp(argv[i], "--help") == 0) {
-            printf("Spousteni skriptu:\n\t./drn_generator \n\t-matrix <nazev souboru s obrazkem matice>, pokud neni zadan, bude grid vygenerovan nahodne! \n\t-rows <pocet_radku>");
-            printf("\n\t-discount <zadana hodnota discountu>");
+            printf("Spousteni skriptu:\n\t./drn-generator \n\t-matrix <nazev souboru s obrazkem matice>, pokud neni zadan, bude grid vygenerovan nahodne! \n\t-rows <pocet_radku>");
             printf("\n\t-cols <pocet_sloupcu> \n\t--impass <pravdepodobnost, ze agent uklouzne> \n\t--slippery <pravdepodobnost, ze agent pujde kolmo k dané akci>");
-            printf("\n\t-samples <pocet vygenerovanych ukazek>");
-            printf("\n\t-actions xxxxxxxx (n, s , e , w, ne, nw, se, sw), 1 pokud se má akce použít, cokoli jiného a akce nebude použita (je nutno ale zadat celý string)");
+            printf("\n\t-samples <pocet vygenerovanych modelu pri nahodnem generovani, pri predanem gridu je samozrejme vygenerovan jen jeden soubor>");
+            //printf("\n\t-actions xxxxxxxx (n, s , e , w, ne, nw, se, sw), 1 pokud se má akce použít, cokoli jiného a akce nebude použita (je nutno ale zadat celý string)");
             printf("\n\n(Na poradi parametru nezalezi)\n");
             
             return 1;
