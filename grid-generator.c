@@ -61,13 +61,19 @@ int grid_generation(int rows, int cols, char* filename) {
     }
     matrix[fail_number] = 'F';
 
+    int start_number = (int) allocated * (rand() / (RAND_MAX + 1.0));
+    while (matrix[start_number] != ' ') {
+        start_number = (int) allocated * (rand() / (RAND_MAX + 1.0));
+    }
+    matrix[start_number] = 'S';
+
     // vygenerovat prekazky, cile, neuspechy, pasti a odmeny
     // TODO pravdepodobnosti do promennych, at se daji lehce menit
     for (int i = 0; i < allocated; i++) {
         if (matrix[i] == ' ') {
             random_number = rand() / (RAND_MAX + 1.0);
             //pod 10% 
-            if (random_number < 0.2) {
+            if (random_number < 0.25) {
                 matrix[i] = '#';
             //pod 12.5%
             /*
@@ -77,9 +83,9 @@ int grid_generation(int rows, int cols, char* filename) {
             } else if (random_number < 0.15){
                 matrix[i] = 'B';
             */
-            } else if (random_number < 0.225) {
-                matrix[i] = 'G';
             } else if (random_number < 0.250) {
+                matrix[i] = 'G';
+            } else if (random_number < 0.275) {
                 matrix[i] = 'F';
             }
             //jinak zustava mezera

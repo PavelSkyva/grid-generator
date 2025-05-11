@@ -32,8 +32,9 @@
 
 #define BAD 16
 #define GOOD 17
-#define START_OBS 18
-
+#define TREASURE 18
+#define CURSE 19
+#define START_OBS 20
 
 typedef struct {
     int cols;

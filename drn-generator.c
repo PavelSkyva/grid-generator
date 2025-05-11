@@ -1,8 +1,8 @@
-#ifndef cassandra_generator_C
-#define cassandra_generator_C
+#ifndef drn_generator_C
+#define drn_generator_C
 
 #include "grid-generator.h"
-#include "cassandra-generator.h"
+#include "drn-generator.h"
 
 /******************************************************
  ******************************************************
@@ -17,7 +17,7 @@
 /*
     PRIKLAD SPUSTENI:
 
-        ./cassandra_generator -matrix in.pomdp -rows 5 -cols 5 -discount 0.95 
+        ./cassandra_generator -matrix in.pomdp -rows 5 -cols 5 
 
 */
 
@@ -68,11 +68,11 @@ int repeat_count;
 
 
 // ------------------------HODNOTY NA UPRAVOVANI-------------------------------
-double step_reward = -0.04;
-double bounty_reward = 10;
+double step_reward = 0;
+double bounty_reward = 50.0;
 double trap_reward = -10;
-double goal_reward = 10.0;
-double failure_reward = -10.0;
+double goal_reward = 100.0;
+double failure_reward = -100.0;
 float discount = 0.95;
 const char *observations_array[] = {"none", "L", "R", "U", "D", "L-R", "L-U", "L-D", "R-U", "R-D", "U-D", "L-R-U", "L-R-D", "L-U-D", "R-U-D", "all", "bad", "good"};
 int observation_count = sizeof(observations_array) / sizeof(observations_array[0]);
@@ -150,7 +150,7 @@ int args_parse(int argc, char **argv) {
             discount = strtod(argv[i+1], NULL);
             discount_given = true;
         } else if (strcmp(argv[i], "--help") == 0) {
-            printf("Spousteni skriptu:\n\t./cassandra_generator \n\t-matrix <nazev souboru s obrazkem matice>, pokud neni zadan, bude grid vygenerovan nahodne! \n\t-rows <pocet_radku>");
+            printf("Spousteni skriptu:\n\t./drn_generator \n\t-matrix <nazev souboru s obrazkem matice>, pokud neni zadan, bude grid vygenerovan nahodne! \n\t-rows <pocet_radku>");
             printf("\n\t-discount <zadana hodnota discountu>");
             printf("\n\t-cols <pocet_sloupcu> \n\t--impass <pravdepodobnost, ze agent uklouzne> \n\t--slippery <pravdepodobnost, ze agent pujde kolmo k dané akci>");
             printf("\n\t-samples <pocet vygenerovanych ukazek>");
@@ -249,7 +249,7 @@ void drn_header() {
     fprintf(file_absorbing, "@nr_states\n%d\n", AVAILABLE_STATES_COUNT + 1);
 
     // +2, init akce a discount akce
-    fprintf(file_absorbing, "@nr_choices\n%d\n", choices() * AVAILABLE_STATES_COUNT + starts_index);
+    fprintf(file_absorbing, "@nr_choices\n%d\n", choices() * AVAILABLE_STATES_COUNT + 1);
 
     fprintf(file_absorbing, "@model\n");
 
@@ -297,6 +297,7 @@ void action_north_slip(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
 
     float impossible_slip = 0.0;
 
+
     if (matrix[i][j-1] == OBSTACLE) {
         impossible_slip += slip_prob / 2;
     } else {
@@ -312,7 +313,7 @@ void action_north_slip(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
     if (matrix[i-1][j] == OBSTACLE) {
         fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], 1.0 - slip_prob + impossible_slip);
     } else {
-        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i-i][j], 1.0 - slip_prob + impossible_slip);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i-1][j], 1.0 - slip_prob + impossible_slip);
     }
 }
 
@@ -387,7 +388,7 @@ void action_south_slip(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
     if (matrix[i+1][j] == OBSTACLE) {
         fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i][j], 1.0 - slip_prob + impossible_slip);
     } else {
-        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i+i][j], 1.0 - slip_prob + impossible_slip);
+        fprintf(file_absorbing, "\t\t%d : %lf\n", matrix[i+1][j], 1.0 - slip_prob + impossible_slip);
     }
 }
 
@@ -762,6 +763,19 @@ int observations(int matrix[][TOTAL_SIZE_COLS], int i, int j) {
         }
     }
 
+    for (int k = 0; k < bounties_index; k++) {
+        if (matrix[i][j] == bounties[k]) {
+            return TREASURE;
+        }
+    }
+
+    for (int k = 0; k < traps_index; k++) {
+        if (matrix[i][j] == traps[k]) {
+            return CURSE;
+        }
+    }
+
+
     // binárně    left|right|up|down
 
     int obstacles = 0;
@@ -825,12 +839,14 @@ int main(int argc, char **argv) {
 
     sprintf(directory, "outputs%dx%d", MATRIX_ROWS, MATRIX_COLS);
 
+    /*
     if (slippery) {
         strcat(directory, "_slippery");
     } else if (impassable) {
         strcat(directory, "_impassable");
     }
-
+    */
+    
     if (mkdir(directory, 0755) == -1) {
         if (errno != EEXIST) {
             perror("Error creating directory");
@@ -861,7 +877,7 @@ int main(int argc, char **argv) {
 
         if (!grid_given) {
             
-            sprintf(input_matrix_file_string, "in.pomdp");
+            sprintf(input_matrix_file_string, "in.drn");
             if (grid_generation(MATRIX_ROWS, MATRIX_COLS, input_matrix_file_string)) {
                 printf("an error occured in generating\n");
                 return 1;
@@ -900,9 +916,10 @@ int main(int argc, char **argv) {
                 //osetreni odradkovani (pri nahodnem generovani je na zacatku odradkovani)
                 if((matrix[i][j] = fgetc(input_matrix_file)) == '\n'){
                     j--;
-                }       
+                }
             }
         }
+        
         
         int state_count = 1;
 
@@ -1025,9 +1042,13 @@ int main(int argc, char **argv) {
                 fprintf(file_absorbing, "state %d ", matrix[i][j]);
                 observation_number = observations(matrix, i, j);
                 if (observation_number == BAD) {
-                    fprintf(file_absorbing, "{%d} [0] fail\n", observation_number);
+                    fprintf(file_absorbing, "{%d} [%f] fail\n", observation_number, failure_reward);
                 } else if (observation_number == GOOD) {
-                    fprintf(file_absorbing, "{%d} [0] goal\n", observation_number);
+                    fprintf(file_absorbing, "{%d} [%f] goal\n", observation_number, goal_reward);
+                } else if (observation_number == TREASURE) {
+                    fprintf(file_absorbing, "{%d} [%f] treasure\n", observation_number, bounty_reward);
+                } else if (observation_number == CURSE) {
+                    fprintf(file_absorbing, "{%d} [%f] curse\n", observation_number, trap_reward);
                 } else {
                     fprintf(file_absorbing, "{%d} [0]\n", observation_number);
                 }
